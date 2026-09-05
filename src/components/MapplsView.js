@@ -48,13 +48,24 @@ export default function MapplsView({
     .leaflet-control-attribution { display: none !important; }
     .leaflet-control-zoom {
       border: none !important;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
-      margin-top: 75px !important;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.3) !important;
+      margin-top: 135px !important;
+      margin-left: 14px !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
     }
     .leaflet-control-zoom a {
+      width: 38px !important;
+      height: 38px !important;
+      line-height: 38px !important;
+      font-size: 20px !important;
+      font-weight: 900 !important;
       background: ${zoomBg} !important;
       color: ${zoomColor} !important;
       border: 1px solid ${zoomBorder} !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
     /* Snapchat Style Glowing Heatmap Animations */

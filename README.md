@@ -1,43 +1,69 @@
 # 🌱 NearBin - Smart Public Waste Reporting & Heatmap APK
 
-> **Community-driven waste reporting and cleanup tracking application for India.**  
-> Featuring Indian street-level resolution (Mappls), Snapchat-style glowing garbage density heatmaps, and role-based workflows for Citizens, Govt Municipal Workers, and Scrap Pickers (Kabadiwalas).
+> **Community-driven waste reporting, live heatmap visualization, and municipal cleanup verification for India.**  
+> Featuring Indian street-level resolution (Mappls & Leaflet), Snapchat-style glowing garbage density heatmaps, instant server profile sync, and specialized portals for Citizens, Govt Municipal Workers (Safai Mitra), and Scrap Collectors (Kabadiwalas).
 
 ---
 
-## 📱 Key Highlights & Architecture
+## 📱 Key Features & Stock Android (Material 3) Architecture
 
-- **Stock Android (Material 3) Aesthetics**: Clean Google Pixel Material You design with floating actions, pill chips, and bottom navigation.
-- **OLED Dark Mode Optimized**: Pitch black (`#0B0E14` / `#141A23`) with vibrant emerald green (`#00E676`) accents, saving battery on low-end AMOLED/OLED displays.
-- **Mappls (MapmyIndia) Street-Level Resolution**: Pinpoints narrow Indian alleys, gallis, landmarks, and street corners accurately.
-- **Snapchat-Style Glowing Heatmap**: Live visual intensity clusters (Red = Critical, Orange = High, Yellow = Medium, Emerald Green = Cleaned).
-- **Anti-Spam & Duplicate Merging**: If another citizen photographs the same dump within 25 meters, the system merges it into a **High-Priority Upvote (+1)** instead of creating duplicate clutter.
-- **3 Roles in One Single APK**:
-  1. **Citizen Mode**: Snap live GPS-tagged photos, upvote nearby dumps, earn Swachhata Karma points & civic badges.
-  2. **Govt Safai Mitra Panel**: View priority queue, mark spots in-progress, and upload mandatory **"After Photo"** proof of cleanup.
-  3. **Kabadiwala Scrap Radar**: Filters high-value recyclable waste (Cardboard, Metal, Plastics) so scrap collectors can claim and recycle them directly.
+- **Stock Android (Material 3) Design**: Clean Google Pixel aesthetic with high contrast, floating action buttons, pill chips, and bottom navigation.
+- **Dynamic Dark & Light Themes**: 
+  - **OLED Dark Mode**: Pitch black (`#0B0E14`) with vibrant emerald green (`#00E676`) accents.
+  - **Clean Daylight Mode**: Crisp white (`#FFFFFF`) and slate (`#F4F6F9`) with bright street tiles.
+- **Mappls / OSM Street-Level Resolution**: Pinpoints narrow Indian alleys, gallis, landmarks, and street corners accurately.
+- **One-Tap GPS Accuracy Recenter (`🎯`)**: Instantly re-centers and zooms in (`18x`) on user coordinates with zero lag.
+- **Snapchat-Style Heatmaps & Hotspot Stories**: Radial glowing density clusters (Critical, High, Medium, Cleaned). Tapping any spot opens chronological full-screen **Snapchat Stories** uploaded by citizens.
+- **Multi-Category Waste Reporting**: Snap uncut camera photos (`allowsEditing: false`) with real-time GPS watermarking, and select multiple waste categories (`Plastic`, `Food Waste`, `Metal`, `Debris`).
+- **Mandatory Authentication Gate**: Google One-Tap Sign-In or Indian Mobile Phone (+91) OTP verification.
+- **Instant Server Profile Sync**: Any profile updates (Name, Phone, Municipal Ward) instantly sync with the backend server and persist across sessions.
+- **3-in-1 Civic Role Portals**:
+  1. **Citizen Portal**: Report dumps, confirm nearby spots (+1 Upvote), earn Swachhata Karma & civic badges.
+  2. **Govt Safai Mitra Portal**: Municipal sanitation queue, audit logs, and mandatory **"After Photo"** cleanup proof upload.
+  3. **Kabadiwala Scrap Radar**: High-value recyclable waste filter (Cardboard, Metal, Plastics) for instant reclamation.
 
 ---
 
-## 🚀 Quick Start & Running the App
+## 🌐 24/7 Free Server Setup Guide (Always Ready & Always Online)
 
-### 1. Run Everything (Server + App Preview)
-In the project directory `c:\NearBin`:
+To make the app work **anytime, anywhere for anyone downloading the APK**, the backend API server (`server/index.js`) can be hosted **100% free** on cloud providers:
+
+### Option A: 1-Click Deployment on Render.com (Recommended - 100% Free)
+Render connects directly to your GitHub repository and automatically deploys your server in under 2 minutes:
+
+1. Create a free account at [https://render.com](https://render.com).
+2. Click **"New +"** ➔ **"Web Service"**.
+3. Connect your GitHub repository: `https://github.com/earthreliefindia-lab/NearBin.git`.
+4. Render will auto-detect the provided `render.yaml` configuration:
+   - **Environment**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `node server/index.js`
+   - **Health Check Path**: `/api/health`
+5. Click **"Create Web Service"**.
+6. Render will assign you a live HTTPS URL (e.g. `https://nearbin-api.onrender.com`).
+7. In your app or EAS build environment, set:
+   ```env
+   EXPO_PUBLIC_API_URL=https://your-app-name.onrender.com/api
+   ```
+*(Render keeps your server running 24/7 with zero maintenance!)*
+
+### Option B: Deploy with Docker (Railway / Fly.io / Cloud Run)
+A production `Dockerfile` is included in the root directory:
 ```bash
-# Runs the API server on port 3001 and launches the Expo dev server
-npm run dev
+# Build Docker image
+docker build -t nearbin-api .
+
+# Run container locally or in cloud
+docker run -p 3001:3001 nearbin-api
 ```
 
-### 2. Test in Expo Go (Any Android Device)
-1. Install **Expo Go** from Google Play Store on your Android phone.
-2. Run:
-   ```bash
-   npx expo start
-   ```
-3. Scan the QR code shown in your terminal with the Expo Go app (or camera).
+---
 
-### 3. Generate Standalone Android APK (.apk)
-To build a standalone APK without needing Android Studio:
+## 📦 How to Build Standalone Android APK (.apk) Anytime
+
+You can generate a direct installable `.apk` file that anyone can install without needing Google Play Store:
+
+### 1. Build via EAS Cloud CLI (One Command)
 ```bash
 # 1. Install EAS CLI globally
 npm install -g eas-cli
@@ -45,53 +71,53 @@ npm install -g eas-cli
 # 2. Login to your free Expo account
 eas login
 
-# 3. Configure and build standalone APK
+# 3. Build standalone APK
 eas build -p android --profile preview
 ```
-This will generate a direct `.apk` download link from Expo Cloud Build service that can be installed on any Android phone!
+Expo's cloud builders will compile the project and give you a direct download link (and QR code) for the `.apk` file within 5 minutes!
+
+### 2. Automated GitHub Actions Release Workflow
+This repository includes an automated GitHub Actions workflow (`.github/workflows/build-apk.yml`).
+- Whenever you push a tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`), GitHub Actions will automatically build the APK and publish it directly to your **GitHub Releases** page:
+  `https://github.com/earthreliefindia-lab/NearBin/releases`
+- Anyone can visit that page and click `Download NearBin.apk` directly to their Android phone!
 
 ---
 
-## 📂 Project Structure
+## 🧪 Local Development
 
-```
-c:\NearBin\
-├── App.js                   # Main application entry with Bottom Navigation
-├── app.json                 # Android APK permissions, dark theme, package settings
-├── package.json             # React Native & backend dependencies
-├── server/
-│   ├── index.js             # Express API with Haversine spatial duplicate filtering
-│   └── database.json        # Persistent JSON database of waste hotspots
-└── src/
-    ├── components/
-    │   ├── MapplsView.js        # Mappls & OSM dark street map with Snapchat Heatmap
-    │   ├── WasteReportModal.js  # Live camera report with GPS watermark & duplicate alert
-    │   ├── HotspotDetailCard.js # Bottom sheet modal with Before/After proof & role actions
-    │   ├── BeforeAfterView.js   # Side-by-side cleanup verification viewer
-    │   └── RoleSwitcher.js      # Citizen / Govt Worker / Kabadiwala role switch
-    ├── screens/
-    │   ├── MapScreen.js         # Snapchat-style dark heatmap screen
-    │   ├── FeedScreen.js        # Nearby community dumps & instant upvotes
-    │   ├── WorkerScreen.js      # Municipal worker task queue & proof submission
-    │   ├── ScrapPickerScreen.js # Kabadiwala recyclable scrap radar
-    │   └── ProfileScreen.js     # Swachhata Karma, Badges & city impact stats
-    ├── services/
-    │   └── api.js               # API service with offline fallback
-    ├── theme/
-    │   └── colors.js            # Stock Android M3 Dark theme palette
-    └── data/
-        └── mockData.js          # Seed dataset with real Indian city coordinates
+```bash
+# Install dependencies
+npm install
+
+# Start both Node.js Backend & Expo Dev Server
+npm run dev
+
+# Run only the backend API server (port 3001)
+npm run server
+
+# Run only the Expo application
+npm start
 ```
 
 ---
 
-## 🛠️ API Endpoints Summary
+## 🛠️ Complete API Reference
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `GET` | `/api/hotspots` | Fetch hotspots with filters (`category`, `status`, `lat`, `lng`) |
-| `POST` | `/api/reports` | Submit citizen report (Auto-merges within 25m) |
-| `POST` | `/api/reports/:id/upvote` | Citizen confirms spot (+1 Upvote & boosts urgency) |
-| `POST` | `/api/reports/:id/status` | Worker marks `in_progress` or `cleaned` with `afterPhoto` |
+| `GET` | `/api/health` | Service uptime and health diagnostic |
+| `GET` | `/api/hotspots` | Fetch hotspots with filters (`category`, `status`, `lat`, `lng`, `radiusKm`) |
+| `POST` | `/api/reports` | Submit citizen report (Auto-merges duplicate within 25m) |
+| `POST` | `/api/reports/:id/upvote` | Citizen confirms spot (+1 Upvote & boosts urgency level) |
+| `POST` | `/api/reports/:id/status` | Worker marks `in_progress` or `cleaned` with `afterPhoto` proof |
 | `POST` | `/api/reports/:id/claim` | Kabadiwala claims recyclable scrap for pickup |
 | `GET` | `/api/stats` | High-level city cleanup & recycling metrics |
+| `POST` | `/api/user/profile` | Instant server-side sync & update of user profile |
+| `GET` | `/api/user/profile/:id` | Instant retrieval of user profile from server |
+
+---
+
+## 🏛️ License & Civic Mission
+NearBin is an open-source civic technology initiative dedicated to Swachh Bharat and clean Indian cities.
+Contributed by [Earth Relief India](https://github.com/earthreliefindia-lab).

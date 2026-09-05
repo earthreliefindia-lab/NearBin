@@ -60,11 +60,22 @@ export default function App() {
   // Check saved user session & load initial data
   useEffect(() => {
     (async () => {
-      // 1. Session check
+      // 1. Session check & instant server sync
       try {
         const saved = await AsyncStorage.getItem('@nearbin_user');
         if (saved) {
-          setUser(JSON.parse(saved));
+          const localUser = JSON.parse(saved);
+          setUser(localUser);
+
+          // Instantly sync latest profile from server
+          if (localUser && localUser.id) {
+            WasteService.getProfile(localUser.id).then((freshUser) => {
+              if (freshUser) {
+                setUser(freshUser);
+                AsyncStorage.setItem('@nearbin_user', JSON.stringify(freshUser));
+              }
+            });
+          }
         } else {
           setAuthModalVisible(true);
         }
@@ -109,10 +120,19 @@ export default function App() {
     }
   };
 
-  // Auth Handlers
-  const handleLoginSuccess = (userData) => {
+  // Auth Handlers with instant server sync
+  const handleLoginSuccess = async (userData) => {
     setUser(userData);
     setAuthModalVisible(false);
+    try {
+      const serverUser = await WasteService.saveProfile(userData);
+      if (serverUser) {
+        setUser(serverUser);
+        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(serverUser));
+      }
+    } catch (e) {
+      console.log('Login server sync error:', e);
+    }
   };
 
   const handleUpdateProfile = async (updatedUser) => {
@@ -121,6 +141,17 @@ export default function App() {
       await AsyncStorage.setItem('@nearbin_user', JSON.stringify(updatedUser));
     } catch (e) {
       console.log('Error caching profile update:', e);
+    }
+
+    // Instantly sync to server
+    try {
+      const serverUser = await WasteService.saveProfile(updatedUser);
+      if (serverUser) {
+        setUser(serverUser);
+        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(serverUser));
+      }
+    } catch (err) {
+      console.log('Server profile sync error:', err);
     }
   };
 

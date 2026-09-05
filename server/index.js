@@ -6,6 +6,7 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const DB_PATH = path.join(__dirname, 'database.json');
+const USERS_DB_PATH = path.join(__dirname, 'users.json');
 
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
@@ -30,6 +31,29 @@ function writeDB(data) {
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
   } catch (err) {
     console.error('Error writing DB:', err);
+  }
+}
+
+// Helper: Read users database
+function readUsersDB() {
+  try {
+    if (!fs.existsSync(USERS_DB_PATH)) {
+      return {};
+    }
+    const data = fs.readFileSync(USERS_DB_PATH, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error reading users DB:', err);
+    return {};
+  }
+}
+
+// Helper: Write users database
+function writeUsersDB(data) {
+  try {
+    fs.writeFileSync(USERS_DB_PATH, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Error writing users DB:', err);
   }
 }
 
@@ -242,6 +266,51 @@ app.get('/api/stats', (req, res) => {
       cleanRatePercentage: total > 0 ? Math.round((cleaned / total) * 100) : 0
     }
   });
+});
+
+// GET /api/health - Cloud service health check
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    app: 'NearBin Backend API',
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// POST /api/user/profile - Create or Update User Profile instantly on server
+app.post('/api/user/profile', (req, res) => {
+  const userData = req.body;
+  if (!userData || !userData.id) {
+    return res.status(400).json({ success: false, message: 'User id is required' });
+  }
+
+  const users = readUsersDB();
+  const existing = users[userData.id] || {};
+  const updatedUser = {
+    ...existing,
+    ...userData,
+    updatedAt: new Date().toISOString(),
+  };
+
+  users[userData.id] = updatedUser;
+  writeUsersDB(users);
+
+  console.log(`[NearBin Server] Profile updated instantly for ${userData.id} (${userData.name})`);
+  res.json({ success: true, message: 'Profile synced to server successfully', user: updatedUser });
+});
+
+// GET /api/user/profile/:id - Instant fetch of user profile from server
+app.get('/api/user/profile/:id', (req, res) => {
+  const { id } = req.params;
+  const users = readUsersDB();
+  const user = users[id];
+
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'User profile not found on server' });
+  }
+
+  res.json({ success: true, user });
 });
 
 app.listen(PORT, () => {

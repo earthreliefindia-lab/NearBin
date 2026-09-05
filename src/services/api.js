@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INITIAL_HOTSPOTS } from '../data/mockData';
 
 const STORAGE_KEY = '@nearbin_hotspots_v1';
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 // Helper: Haversine distance in meters
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -268,5 +268,42 @@ export const WasteService = {
         cleanRatePercentage: total > 0 ? Math.round((cleaned / total) * 100) : 0
       }
     };
-  }
+  },
+
+  // Save or Update User Profile on Server
+  async saveProfile(userData) {
+    try {
+      const res = await fetch(`${API_BASE}/user/profile`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.user || userData;
+      }
+    } catch (e) {
+      console.log('Profile sync server error:', e?.message);
+    }
+    return userData;
+  },
+
+  // Instant fetch of User Profile from Server
+  async getProfile(userId) {
+    try {
+      const res = await fetch(`${API_BASE}/user/profile/${userId}`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          return data.user;
+        }
+      }
+    } catch (e) {
+      console.log('Profile fetch server error:', e?.message);
+    }
+    return null;
+  },
 };
