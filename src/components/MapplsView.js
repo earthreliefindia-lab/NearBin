@@ -2,6 +2,13 @@ import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 
+let NativeWebView = null;
+if (Platform.OS !== 'web') {
+  try {
+    NativeWebView = require('react-native-webview').WebView;
+  } catch (e) {}
+}
+
 export default function MapplsView({
   hotspots = [],
   userLocation = { latitude: 28.5672, longitude: 77.2435 },
@@ -289,10 +296,13 @@ export default function MapplsView({
   }
 
   // Native Android / iOS WebView
-  const { WebView } = require('react-native-webview');
+  if (!NativeWebView) {
+    return <View style={styles.container} />;
+  }
+
   return (
     <View style={styles.container}>
-      <WebView
+      <NativeWebView
         ref={webViewRef}
         originWhitelist={['*']}
         source={{ html: generateMapHtml() }}
@@ -300,6 +310,9 @@ export default function MapplsView({
         onMessage={handleMessage}
         javaScriptEnabled={true}
         domStorageEnabled={true}
+        androidLayerType="hardware"
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
       />
     </View>
   );
