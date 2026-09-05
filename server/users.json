@@ -5,5 +5,19 @@
     "phone": "+91 98765 43210",
     "ward": "Ward 14",
     "updatedAt": "2026-09-05T11:42:35.168Z"
+  },
+  "usr_p_7412": {
+    "id": "usr_p_7412",
+    "name": "Citizen 7412",
+    "phone": "+91 9632587412",
+    "email": "citizen.7412@nearbin.in",
+    "authProvider": "phone",
+    "ward": "Municipal Zone 5 - Green Park Ward",
+    "avatar": "🇮🇳",
+    "role": "citizen",
+    "karma": 150,
+    "verifiedReports": 3,
+    "joinedAt": "Sept 2026",
+    "updatedAt": "2026-09-05T11:52:09.864Z"
   }
 }

@@ -1,7 +1,47 @@
-# 🌱 NearBin - Smart Public Waste Reporting & Heatmap APK
+# 🌱 NearBin - Smart Public Waste Heatmap & Citizen Reporting APK
 
-> **Community-driven waste reporting, live heatmap visualization, and municipal cleanup verification for India.**  
+> **A Civic Technology Initiative by [Earth Relief India](https://github.com/earthreliefindia-lab).**  
+> Community-driven waste reporting, live heatmap visualization, and municipal cleanup verification for India.  
 > Featuring Indian street-level resolution (Mappls & Leaflet), Snapchat-style glowing garbage density heatmaps, instant server profile sync, and specialized portals for Citizens, Govt Municipal Workers (Safai Mitra), and Scrap Collectors (Kabadiwalas).
+
+---
+
+## 🌿 The Earth Relief Story: Why NearBin Was Born
+
+### ⚠️ The Silent Environmental Crisis (The Pain Point)
+Every single day, thousands of tons of indestructible single-use plastics choke our Indian streets, block city storm drains, poison fertile agricultural soil, and release toxic carcinogenic fumes into our atmosphere when incinerated on roadside dumps. Innocent stray animals consume plastic heaps in hunger, and microplastics have begun infiltrating our groundwater aquifers.
+
+Witnessing this severe crisis firsthand across Indian neighbourhoods and agricultural belts, **Keshav Singh** recognized that traditional awareness campaigns alone cannot solve this catastrophic epidemic. The world needs two radical interventions:
+1. **At the source**: 100% plant-based biodegradable and compostable alternatives that dissolve harmlessly back into nature as rich organic manure.
+2. **On the ground**: A real-time digital surveillance and reporting network that unites citizens, municipal sanitation squads, and scrap collectors into an organized, transparent cleanup force.
+
+This vision powers **Earth Relief India** and its digital civic platform: **NearBin**.
+
+---
+
+## 🏢 Brand & Founder Information
+
+| Detail | Information |
+| :--- | :--- |
+| **Organization** | **Earth Relief India** |
+| **Mission** | Eliminating Single-Use Plastics through Biodegradable & Compostable Alternatives |
+| **Founder** | **Keshav Singh** (Founder & Managing Director) |
+| **Founder LinkedIn** | [linkedin.com/in/keshav-singh-45814a373](https://www.linkedin.com/in/keshav-singh-45814a373/) |
+| **Founder Email** | [keshavsingh6775@gmail.com](mailto:keshavsingh6775@gmail.com) |
+| **Official Desk** | [eco@earthrelief.in](mailto:eco@earthrelief.in) |
+| **General Inquiries** | [earthrelief.india@gmail.com](mailto:earthrelief.india@gmail.com) |
+| **Direct Phone** | [+91 78388 89588](tel:+917838889588) |
+| **Official WhatsApp** | [wa.me/917838889588](https://wa.me/917838889588) |
+| **Headquarters Address** | Near Jogendra Market, Plot NO.08, vill-Bishnulli, Dadri, Greater Noida, Uttar Pradesh 203207 |
+| **Google Maps Location** | [View on Google Maps](https://maps.app.goo.gl/WwpK8YgHns8wPaay5) |
+| **GitHub Repository** | [github.com/earthreliefindia-lab/NearBin](https://github.com/earthreliefindia-lab/NearBin) |
+
+### 🌐 Official Social Media Channels
+- 📸 **Instagram**: [@earthrelief.india](https://www.instagram.com/earthrelief.india?igsh=MWs2d3lqMzBycXlidQ==)
+- 👥 **Facebook**: [earthrelief.india](https://www.facebook.com/earthrelief.india/)
+- 🐦 **X (formerly Twitter)**: [@earth_relief](https://x.com/earth_relief)
+- 🎥 **YouTube**: [Earth Relief India Channel](https://www.youtube.com/channel/UCLd98X24FN4_vz23l-FIVYA?sub_confirmation=1)
+- 💼 **LinkedIn Company**: [Earth Relief on LinkedIn](https://www.linkedin.com/in/earth-relief-8722213b0/)
 
 ---
 
@@ -31,7 +71,7 @@ To make the app work **anytime, anywhere for anyone downloading the APK**, the b
 ### Option A: 1-Click Deployment on Render.com (Recommended - 100% Free)
 Render connects directly to your GitHub repository and automatically deploys your server in under 2 minutes:
 
-1. Create a free account at [https://render.com](https://render.com).
+1. Create a free account at [https://render.com](https://render.com) using your Google account (`earthrelief.india@gmail.com`).
 2. Click **"New +"** ➔ **"Web Service"**.
 3. Connect your GitHub repository: `https://github.com/earthreliefindia-lab/NearBin.git`.
 4. Render will auto-detect the provided `render.yaml` configuration:
@@ -121,3 +161,4 @@ npm start
 ## 🏛️ License & Civic Mission
 NearBin is an open-source civic technology initiative dedicated to Swachh Bharat and clean Indian cities.
 Contributed by [Earth Relief India](https://github.com/earthreliefindia-lab).
+Founder: [Keshav Singh](https://www.linkedin.com/in/keshav-singh-45814a373/).
