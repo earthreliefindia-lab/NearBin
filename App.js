@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, DarkColors, LightColors } from './src/theme/colors';
 import { WasteService } from './src/services/api';
 
-// Screens
+// Screens & Modals
 import MapScreen from './src/screens/MapScreen';
 import FeedScreen from './src/screens/FeedScreen';
 import MenuScreen from './src/screens/MenuScreen';
+import AuthModal from './src/components/AuthModal';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('map'); // 'map' | 'feed' | 'menu'
@@ -16,6 +18,10 @@ export default function App() {
   const [hotspots, setHotspots] = useState([]);
   const [stats, setStats] = useState(null);
   const [userLocation, setUserLocation] = useState({ latitude: 28.5672, longitude: 77.2435 });
+  
+  // Mandatory User Authentication State
+  const [user, setUser] = useState(null);
+  const [authModalVisible, setAuthModalVisible] = useState(false);
 
   const activeColors = isDark ? DarkColors : LightColors;
   const paperTheme = isDark
@@ -51,9 +57,25 @@ export default function App() {
     }
   };
 
+  // Check saved user session & load initial data
   useEffect(() => {
     (async () => {
+      // 1. Session check
+      try {
+        const saved = await AsyncStorage.getItem('@nearbin_user');
+        if (saved) {
+          setUser(JSON.parse(saved));
+        } else {
+          setAuthModalVisible(true);
+        }
+      } catch (e) {
+        setAuthModalVisible(true);
+      }
+
+      // 2. Data load
       await loadData();
+
+      // 3. Location fetch
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
@@ -87,9 +109,35 @@ export default function App() {
     }
   };
 
+  // Auth Handlers
+  const handleLoginSuccess = (userData) => {
+    setUser(userData);
+    setAuthModalVisible(false);
+  };
+
+  const handleUpdateProfile = async (updatedUser) => {
+    setUser(updatedUser);
+    try {
+      await AsyncStorage.setItem('@nearbin_user', JSON.stringify(updatedUser));
+    } catch (e) {
+      console.log('Error caching profile update:', e);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('@nearbin_user');
+    } catch (e) {}
+    setUser(null);
+    setAuthModalVisible(true);
+  };
+
   // Citizen report submit
   const handleSubmitReport = async (reportData) => {
-    const result = await WasteService.submitReport(reportData);
+    const result = await WasteService.submitReport({
+      ...reportData,
+      reportedBy: user?.name || 'Citizen',
+    });
     await loadData();
     return result;
   };
@@ -150,6 +198,7 @@ export default function App() {
               onUpdateStatus={handleUpdateStatus}
               onClaimRecyclables={handleClaimRecyclables}
               currentRole="citizen"
+              isDark={isDark}
             />
           )}
 
@@ -161,6 +210,9 @@ export default function App() {
               hotspots={hotspots}
               onUpdateStatus={handleUpdateStatus}
               onClaimRecyclables={handleClaimRecyclables}
+              user={user}
+              onUpdateProfile={handleUpdateProfile}
+              onLogout={handleLogout}
             />
           )}
         </View>
@@ -197,6 +249,13 @@ export default function App() {
             );
           })}
         </View>
+
+        {/* Mandatory Authentication Gate Modal (Google Sign-In / Phone OTP) */}
+        <AuthModal
+          visible={authModalVisible || !user}
+          onLoginSuccess={handleLoginSuccess}
+          isDark={isDark}
+        />
       </SafeAreaView>
     </PaperProvider>
   );

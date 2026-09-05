@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
-import { Colors, CategoryMeta } from '../theme/colors';
+import { Colors, DarkColors, LightColors, CategoryMeta } from '../theme/colors';
 import HotspotDetailCard from '../components/HotspotDetailCard';
 
 export default function FeedScreen({
@@ -9,8 +9,10 @@ export default function FeedScreen({
   onUpdateStatus,
   onClaimRecyclables,
   currentRole,
+  isDark = true,
 }) {
   const [selectedHotspot, setSelectedHotspot] = useState(null);
+  const theme = isDark ? DarkColors : LightColors;
 
   const renderItem = ({ item }) => {
     const cat = CategoryMeta[item.category] || CategoryMeta.plastic;
@@ -18,7 +20,10 @@ export default function FeedScreen({
 
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[
+          styles.card,
+          { backgroundColor: theme.surfaceCard, borderColor: theme.border },
+        ]}
         activeOpacity={0.75}
         onPress={() => setSelectedHotspot(item)}
       >
@@ -31,22 +36,22 @@ export default function FeedScreen({
             </View>
 
             {isCleaned ? (
-              <View style={[styles.badge, { backgroundColor: Colors.lowContainer, borderColor: Colors.low }]}>
-                <Text style={[styles.badgeText, { color: Colors.low }]}>✨ CLEANED</Text>
+              <View style={[styles.badge, { backgroundColor: theme.lowContainer, borderColor: theme.low }]}>
+                <Text style={[styles.badgeText, { color: theme.low }]}>✨ CLEANED</Text>
               </View>
             ) : (
               <View
                 style={[
                   styles.badge,
                   item.urgency === 'critical'
-                    ? { backgroundColor: Colors.criticalContainer, borderColor: Colors.critical }
-                    : { backgroundColor: Colors.highContainer, borderColor: Colors.high },
+                    ? { backgroundColor: theme.criticalContainer, borderColor: theme.critical }
+                    : { backgroundColor: theme.highContainer, borderColor: theme.high },
                 ]}
               >
                 <Text
                   style={[
                     styles.badgeText,
-                    { color: item.urgency === 'critical' ? Colors.critical : Colors.high },
+                    { color: item.urgency === 'critical' ? theme.critical : theme.high },
                   ]}
                 >
                   {item.urgency.toUpperCase()}
@@ -55,22 +60,29 @@ export default function FeedScreen({
             )}
           </View>
 
-          <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.cardAddress} numberOfLines={1}>📍 {item.address}</Text>
+          <Text style={[styles.cardTitle, { color: theme.textPrimary }]} numberOfLines={2}>
+            {item.title}
+          </Text>
+          <Text style={[styles.cardAddress, { color: theme.textMuted }]} numberOfLines={1}>
+            📍 {item.address}
+          </Text>
 
           {/* Card Footer */}
           <View style={styles.cardFooter}>
             <View style={styles.upvoteCounter}>
               <Text style={styles.upvoteEmoji}>🔥</Text>
-              <Text style={styles.upvoteText}>{item.upvotes} reports</Text>
+              <Text style={[styles.upvoteText, { color: theme.textSecondary }]}>{item.upvotes} reports</Text>
             </View>
 
             {!isCleaned && (
               <TouchableOpacity
-                style={styles.inlineUpvoteBtn}
+                style={[
+                  styles.inlineUpvoteBtn,
+                  { backgroundColor: theme.surfaceVariant, borderColor: theme.border },
+                ]}
                 onPress={() => onUpvote(item.id)}
               >
-                <Text style={styles.inlineUpvoteText}>👍 Confirm (+1)</Text>
+                <Text style={[styles.inlineUpvoteText, { color: theme.primary }]}>👍 Confirm (+1)</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -80,10 +92,12 @@ export default function FeedScreen({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.screenTitle}>Nearby Waste Feed</Text>
-        <Text style={styles.screenSubtitle}>Community-verified dumpsites in your area</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <Text style={[styles.screenTitle, { color: theme.textPrimary }]}>Nearby Waste Feed</Text>
+        <Text style={[styles.screenSubtitle, { color: theme.textSecondary }]}>
+          Community-verified dumpsites in your area
+        </Text>
       </View>
 
       <FlatList
@@ -110,24 +124,19 @@ export default function FeedScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingTop: 18,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.surface,
   },
   screenTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: Colors.textPrimary,
+    fontWeight: '900',
   },
   screenSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
     marginTop: 2,
   },
   list: {
@@ -135,11 +144,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   card: {
-    backgroundColor: Colors.surfaceCard,
     borderRadius: 18,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.border,
     flexDirection: 'row',
   },
   thumbnail: {
@@ -171,13 +178,11 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.textPrimary,
     lineHeight: 18,
     marginBottom: 4,
   },
   cardAddress: {
     fontSize: 11,
-    color: Colors.textMuted,
     marginBottom: 8,
   },
   cardFooter: {
@@ -196,20 +201,16 @@ const styles = StyleSheet.create({
   },
   upvoteText: {
     fontSize: 12,
-    color: Colors.textSecondary,
     fontWeight: '600',
   },
   inlineUpvoteBtn: {
-    backgroundColor: Colors.surfaceVariant,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   inlineUpvoteText: {
     fontSize: 11,
-    color: Colors.primary,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

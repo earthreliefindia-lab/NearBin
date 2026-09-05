@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Switch,
+  Modal,
+  TextInput,
+  Alert,
+} from 'react-native';
 import { Colors, DarkColors, LightColors } from '../theme/colors';
 import WorkerScreen from './WorkerScreen';
 import ScrapPickerScreen from './ScrapPickerScreen';
@@ -11,42 +21,124 @@ export default function MenuScreen({
   hotspots,
   onUpdateStatus,
   onClaimRecyclables,
+  user,
+  onUpdateProfile,
+  onLogout,
 }) {
   const [activeSubScreen, setActiveSubScreen] = useState(null); // 'worker' | 'scrap' | null
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  // Edit profile form state
+  const [editName, setEditName] = useState(user?.name || 'Keshaw Sharma');
+  const [editPhone, setEditPhone] = useState(user?.phone || '+91 98765 43210');
+  const [editWard, setEditWard] = useState(user?.ward || 'South Delhi Ward 14 - Malviya Nagar');
+
   const theme = isDark ? DarkColors : LightColors;
+
+  const handleOpenEdit = () => {
+    setEditName(user?.name || 'Keshaw Sharma');
+    setEditPhone(user?.phone || '+91 98765 43210');
+    setEditWard(user?.ward || 'South Delhi Ward 14 - Malviya Nagar');
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfile = () => {
+    if (!editName.trim()) {
+      Alert.alert('Validation Error', 'Name cannot be empty.');
+      return;
+    }
+
+    const updated = {
+      ...(user || {}),
+      name: editName.trim(),
+      phone: editPhone.trim(),
+      ward: editWard.trim(),
+    };
+
+    if (onUpdateProfile) {
+      onUpdateProfile(updated);
+    }
+    setIsEditingProfile(false);
+    Alert.alert('Profile Updated', 'Your civic profile has been saved successfully.');
+  };
+
+  const handleConfirmLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out from NearBin?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: () => {
+            if (onLogout) onLogout();
+          },
+        },
+      ]
+    );
+  };
+
+  const displayName = user?.name || 'Keshaw Sharma';
+  const displayPhone = user?.phone || '+91 98765 43210';
+  const displayWard = user?.ward || 'South Delhi Ward 14 - Malviya Nagar';
+  const displayKarma = user?.karma ?? 480;
+  const displayReports = user?.verifiedReports ?? 14;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>⚙️ Menu & Settings</Text>
+        <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>⚙️ Menu & Profile</Text>
         <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-          Preferences, Portals & Citizen Karma
+          Account settings, Portals & Citizen Karma
         </Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        {/* User Card */}
+        {/* User Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
           <View style={styles.profileTop}>
             <View style={[styles.avatarCircle, { borderColor: theme.primary, backgroundColor: theme.surfaceVariant }]}>
-              <Text style={styles.avatarEmoji}>🇮🇳</Text>
+              <Text style={styles.avatarEmoji}>{user?.avatar || '🇮🇳'}</Text>
             </View>
             <View style={styles.profileMeta}>
-              <Text style={[styles.userName, { color: theme.textPrimary }]}>Keshaw Sharma</Text>
+              <Text style={[styles.userName, { color: theme.textPrimary }]}>{displayName}</Text>
+              <Text style={[styles.userWard, { color: theme.textSecondary }]} numberOfLines={1}>
+                📍 {displayWard}
+              </Text>
               <Text style={[styles.userBadge, { color: theme.primary }]}>⭐ Swachhata Champion</Text>
+            </View>
+            {/* Edit Profile Button */}
+            <TouchableOpacity
+              style={[styles.editProfileBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+              onPress={handleOpenEdit}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.editProfileBtnText, { color: theme.primary }]}>✏️ Edit</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* User Contact & Auth method badge */}
+          <View style={[styles.contactRow, { borderTopColor: theme.border }]}>
+            <Text style={[styles.contactLabel, { color: theme.textMuted }]}>Contact / ID:</Text>
+            <Text style={[styles.contactValue, { color: theme.textPrimary }]}>{displayPhone}</Text>
+            <View style={[styles.authProviderBadge, { backgroundColor: theme.primaryContainer }]}>
+              <Text style={[styles.authProviderText, { color: theme.primary }]}>
+                {user?.authProvider === 'google' ? 'Google' : 'Phone OTP'}
+              </Text>
             </View>
           </View>
 
           {/* Karma Metric Banner */}
           <View style={[styles.karmaBanner, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
             <View style={styles.karmaBlock}>
-              <Text style={[styles.karmaNum, { color: theme.primary }]}>480</Text>
+              <Text style={[styles.karmaNum, { color: theme.primary }]}>{displayKarma}</Text>
               <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Karma Points</Text>
             </View>
             <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
             <View style={styles.karmaBlock}>
-              <Text style={[styles.karmaNum, { color: theme.secondary }]}>14</Text>
+              <Text style={[styles.karmaNum, { color: theme.secondary }]}>{displayReports}</Text>
               <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Spots Verified</Text>
             </View>
             <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
@@ -64,11 +156,11 @@ export default function MenuScreen({
             <View style={styles.settingIconRow}>
               <Text style={styles.settingEmoji}>{isDark ? '🌙' : '☀️'}</Text>
               <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>
-                {isDark ? 'Dark Theme (OLED Black)' : 'Light Theme'}
+                {isDark ? 'Dark Theme (OLED Black)' : 'Light Theme (Clean White)'}
               </Text>
             </View>
             <Text style={[styles.settingSub, { color: theme.textSecondary }]}>
-              {isDark ? 'Optimized for night & battery saving' : 'Bright clean contrast'}
+              {isDark ? 'Optimized for night & battery saving' : 'High contrast bright street mode'}
             </Text>
           </View>
 
@@ -136,8 +228,87 @@ export default function MenuScreen({
           </View>
         </View>
 
+        {/* Account & Session Management */}
+        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>ACCOUNT & SESSION</Text>
+        <TouchableOpacity
+          style={[styles.logoutBtn, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}
+          onPress={handleConfirmLogout}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.logoutIcon}>🚪</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.logoutText, { color: theme.critical }]}>Sign Out / Switch Account</Text>
+            <Text style={[styles.logoutSub, { color: theme.textMuted }]}>Clear saved session on this device</Text>
+          </View>
+          <Text style={[styles.logoutArrow, { color: theme.critical }]}>➔</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={isEditingProfile} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.editSheet, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={styles.sheetHeaderRow}>
+              <Text style={[styles.sheetTitle, { color: theme.textPrimary }]}>✏️ Edit Profile</Text>
+              <TouchableOpacity onPress={() => setIsEditingProfile(false)}>
+                <Text style={[styles.sheetCloseText, { color: theme.textMuted }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Full Name */}
+              <Text style={[styles.inputLabel, { color: theme.textMuted }]}>FULL NAME</Text>
+              <TextInput
+                style={[styles.inputField, { backgroundColor: theme.surfaceVariant, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Your Name"
+                placeholderTextColor={theme.textMuted}
+              />
+
+              {/* Phone Number */}
+              <Text style={[styles.inputLabel, { color: theme.textMuted }]}>PHONE NUMBER</Text>
+              <TextInput
+                style={[styles.inputField, { backgroundColor: theme.surfaceVariant, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editPhone}
+                onChangeText={setEditPhone}
+                placeholder="+91 XXXXX XXXXX"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="phone-pad"
+              />
+
+              {/* Municipal Ward / Locality */}
+              <Text style={[styles.inputLabel, { color: theme.textMuted }]}>LOCALITY / MUNICIPAL WARD</Text>
+              <TextInput
+                style={[styles.inputField, { backgroundColor: theme.surfaceVariant, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editWard}
+                onChangeText={setEditWard}
+                placeholder="e.g. Ward 14, Lajpat Nagar"
+                placeholderTextColor={theme.textMuted}
+              />
+
+              {/* Action Buttons */}
+              <View style={styles.sheetBtnRow}>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { borderColor: theme.border }]}
+                  onPress={() => setIsEditingProfile(false)}
+                >
+                  <Text style={[styles.cancelBtnText, { color: theme.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.saveBtn, { backgroundColor: theme.primary }]}
+                  onPress={handleSaveProfile}
+                >
+                  <Text style={[styles.saveBtnText, { color: theme.textInverse }]}>Save Changes ✓</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Sub-Screen Modal: Govt Safai Mitra */}
       <Modal visible={activeSubScreen === 'worker'} animationType="slide">
@@ -197,12 +368,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   avatarCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
@@ -214,13 +385,54 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
+  },
+  userWard: {
+    fontSize: 12,
+    marginTop: 2,
   },
   userBadge: {
     fontSize: 12,
     fontWeight: '700',
     marginTop: 2,
+  },
+  editProfileBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  editProfileBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    paddingTop: 10,
+    marginBottom: 12,
+    gap: 8,
+  },
+  contactLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  contactValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  authProviderBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  authProviderText: {
+    fontSize: 10,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   karmaBanner: {
     flexDirection: 'row',
@@ -328,6 +540,98 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 15,
     fontWeight: '800',
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  logoutIcon: {
+    fontSize: 20,
+  },
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  logoutSub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  logoutArrow: {
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  editSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  sheetHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  sheetCloseText: {
+    fontSize: 20,
+    fontWeight: '800',
+    padding: 4,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  inputField: {
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  sheetBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  saveBtn: {
+    flex: 1.5,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  saveBtnText: {
+    fontSize: 14,
+    fontWeight: '900',
   },
   subModalHeader: {
     paddingTop: 16,

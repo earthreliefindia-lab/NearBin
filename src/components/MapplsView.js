@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { Colors } from '../theme/colors';
+import { Colors, DarkColors, LightColors } from '../theme/colors';
 
 let NativeWebView = null;
 if (Platform.OS !== 'web') {
@@ -13,15 +13,23 @@ export default function MapplsView({
   hotspots = [],
   userLocation = { latitude: 28.5672, longitude: 77.2435 },
   onSelectHotspot,
-  selectedCategory = 'all'
+  selectedCategory = 'all',
+  isDark = true,
 }) {
   const webViewRef = useRef(null);
 
-  // Generate HTML with Leaflet, Dark Tile Layer, Snapchat Heatmap shaders & markers
+  // Generate HTML with Leaflet, Dynamic Dark/Light Tile Layer, Snapchat Heatmap shaders & markers
   const generateMapHtml = () => {
     const serializedHotspots = JSON.stringify(hotspots);
     const userLat = userLocation?.latitude || 28.5672;
     const userLng = userLocation?.longitude || 77.2435;
+    const mapBg = isDark ? '#0b0e14' : '#f8fafc';
+    const tileFilter = isDark
+      ? 'filter: brightness(0.72) invert(1) contrast(3.4) hue-rotate(205deg) saturate(0.4) brightness(0.78);'
+      : 'filter: none;';
+    const zoomBg = isDark ? '#18202d' : '#ffffff';
+    const zoomColor = isDark ? '#00E676' : '#00B248';
+    const zoomBorder = isDark ? '#2a3649' : '#cbd5e1';
 
     return `<!DOCTYPE html>
 <html>
@@ -31,22 +39,22 @@ export default function MapplsView({
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body, #map { width: 100%; height: 100%; background: #0b0e14; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body, #map { width: 100%; height: 100%; background: ${mapBg}; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     
-    /* Dark Tile Layer Filter */
+    /* Tile Layer Filter (Adapts to Dark / Light Theme) */
     .leaflet-tile-pane {
-      filter: brightness(0.72) invert(1) contrast(3.4) hue-rotate(205deg) saturate(0.4) brightness(0.78);
+      ${tileFilter}
     }
     .leaflet-control-attribution { display: none !important; }
     .leaflet-control-zoom {
       border: none !important;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
-      margin-top: 70px !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2) !important;
+      margin-top: 75px !important;
     }
     .leaflet-control-zoom a {
-      background: #18202d !important;
-      color: #00E676 !important;
-      border: 1px solid #2a3649 !important;
+      background: ${zoomBg} !important;
+      color: ${zoomColor} !important;
+      border: 1px solid ${zoomBorder} !important;
     }
 
     /* Snapchat Style Glowing Heatmap Animations */
@@ -137,42 +145,10 @@ export default function MapplsView({
       animation: userGlow 2s infinite;
     }
 
-    /* Floating GPS Target Recenter Button */
-    .map-gps-btn {
-      position: absolute;
-      bottom: 85px;
-      right: 16px;
-      width: 48px;
-      height: 48px;
-      background: #141A23;
-      border-radius: 50%;
-      border: 2px solid #2A3649;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.75);
-      cursor: pointer;
-      z-index: 1000;
-      transition: transform 0.15s ease, background 0.15s ease;
-    }
-    .map-gps-btn:active {
-      transform: scale(0.9);
-      background: #1D2533;
-    }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div class="map-gps-btn" onclick="map.flyTo([userLat, userLng], 18, { duration: 1.2 })" title="Recenter to Current Location">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="10"></circle>
-      <line x1="22" y1="12" x2="18" y2="12"></line>
-      <line x1="6" y1="12" x2="2" y2="12"></line>
-      <line x1="12" y1="6" x2="12" y2="2"></line>
-      <line x1="12" y1="22" x2="12" y2="18"></line>
-      <circle cx="12" cy="12" r="3" fill="#00E676"></circle>
-    </svg>
-  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -316,12 +292,14 @@ export default function MapplsView({
     }
   }, [hotspots]);
 
+  const bgColor = isDark ? DarkColors.background : LightColors.background;
+
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: bgColor }]}>
         <iframe
           srcDoc={generateMapHtml()}
-          style={{ width: '100%', height: '100%', border: 'none' }}
+          style={{ width: '100%', height: '100%', border: 'none', backgroundColor: bgColor }}
           title="NearBin Mappls Heatmap"
         />
       </View>
@@ -330,16 +308,16 @@ export default function MapplsView({
 
   // Native Android / iOS WebView
   if (!NativeWebView) {
-    return <View style={styles.container} />;
+    return <View style={[styles.container, { backgroundColor: bgColor }]} />;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bgColor }]}>
       <NativeWebView
         ref={webViewRef}
         originWhitelist={['*']}
         source={{ html: generateMapHtml() }}
-        style={styles.webView}
+        style={[styles.webView, { backgroundColor: bgColor }]}
         onMessage={handleMessage}
         javaScriptEnabled={true}
         domStorageEnabled={true}
@@ -354,10 +332,8 @@ export default function MapplsView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   webView: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
 });

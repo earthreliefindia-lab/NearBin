@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { Colors } from '../theme/colors';
+import { Colors, DarkColors, LightColors } from '../theme/colors';
 import MapplsView from '../components/MapplsView';
 import WasteReportModal from '../components/WasteReportModal';
 import HotspotDetailCard from '../components/HotspotDetailCard';
@@ -31,6 +31,8 @@ export default function MapScreen({
   const [isLocating, setIsLocating] = useState(false);
   const [mapKey, setMapKey] = useState(1);
 
+  const theme = isDark ? DarkColors : LightColors;
+
   // Filter hotspots for map display
   const filteredHotspots = hotspots.filter((h) => {
     if (selectedCategory === 'all') return true;
@@ -51,12 +53,22 @@ export default function MapScreen({
   };
 
   return (
-    <View style={styles.container}>
-      {/* Top Floating Glass Header */}
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Top Floating Glass Header (Adapts dynamically to Light & Dark Theme) */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: isDark ? 'rgba(11, 14, 20, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+            borderBottomColor: theme.border,
+          },
+        ]}
+      >
         <View style={styles.headerTop}>
           <View style={styles.brandRow}>
-            <Text style={styles.brandLogo}>🌱 Near<Text style={{ color: Colors.primary }}>Bin</Text></Text>
+            <Text style={[styles.brandLogo, { color: theme.textPrimary }]}>
+              🌱 Near<Text style={{ color: theme.primary }}>Bin</Text>
+            </Text>
             <View style={styles.liveHeatmapBadge}>
               <View style={styles.liveDot} />
               <Text style={styles.liveText}>SNAP HEATMAP ACTIVE</Text>
@@ -71,37 +83,59 @@ export default function MapScreen({
             return (
               <TouchableOpacity
                 key={chip.id}
-                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: isActive ? theme.primaryContainer : theme.surfaceVariant,
+                    borderColor: isActive ? theme.primary : theme.border,
+                  },
+                ]}
                 onPress={() => setSelectedCategory(chip.id)}
               >
                 <Text style={styles.chipEmoji}>{chip.emoji}</Text>
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{chip.label}</Text>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isActive ? theme.primary : theme.textSecondary },
+                    isActive && { fontWeight: '800' },
+                  ]}
+                >
+                  {chip.label}
+                </Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* Interactive Mappls Dark Map with Glowing Heatmap */}
+      {/* Interactive Mappls Map with Glowing Heatmap */}
       <View style={styles.mapContainer}>
         <MapplsView
-          key={mapKey}
+          key={`${mapKey}-${isDark ? 'dark' : 'light'}`}
           hotspots={filteredHotspots}
           userLocation={userLocation}
           onSelectHotspot={(spot) => setSelectedHotspot(spot)}
           selectedCategory={selectedCategory}
+          isDark={isDark}
         />
       </View>
 
       {/* Floating GPS Target / Accuracy Recenter Button */}
       <TouchableOpacity
-        style={styles.gpsFab}
+        style={[
+          styles.gpsFab,
+          {
+            backgroundColor: theme.surfaceCard,
+            borderColor: theme.border,
+            shadowColor: theme.shadow,
+          },
+        ]}
         onPress={handleRecenterClick}
         activeOpacity={0.8}
         disabled={isLocating}
       >
         {isLocating ? (
-          <ActivityIndicator color={Colors.primary} size="small" />
+          <ActivityIndicator color={theme.primary} size="small" />
         ) : (
           <Text style={styles.gpsFabIcon}>🎯</Text>
         )}
@@ -109,12 +143,12 @@ export default function MapScreen({
 
       {/* Floating Action Button (FAB) - Live Camera Report */}
       <TouchableOpacity
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: theme.primary }]}
         onPress={() => setReportModalVisible(true)}
         activeOpacity={0.85}
       >
         <Text style={styles.fabIcon}>📸</Text>
-        <Text style={styles.fabText}>Report Spot</Text>
+        <Text style={[styles.fabText, { color: theme.textInverse }]}>Report Spot</Text>
       </TouchableOpacity>
 
       {/* Waste Report Camera Modal */}
@@ -153,7 +187,6 @@ export default function MapScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   header: {
     position: 'absolute',
@@ -161,11 +194,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 100,
-    backgroundColor: 'rgba(11, 14, 20, 0.92)',
     paddingTop: 14,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   headerTop: {
     paddingHorizontal: 16,
@@ -179,7 +210,6 @@ const styles = StyleSheet.create({
   brandLogo: {
     fontSize: 22,
     fontWeight: '900',
-    color: Colors.textPrimary,
     letterSpacing: -0.5,
   },
   liveHeatmapBadge: {
@@ -212,17 +242,11 @@ const styles = StyleSheet.create({
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceVariant,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
     gap: 6,
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primaryContainer,
-    borderColor: Colors.primary,
   },
   chipEmoji: {
     fontSize: 13,
@@ -230,10 +254,6 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.textSecondary,
-  },
-  chipTextActive: {
-    color: Colors.primary,
   },
   mapContainer: {
     flex: 1,
@@ -245,14 +265,11 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#141A23',
-    borderWidth: 2,
-    borderColor: '#2A3649',
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 8,
     zIndex: 90,
@@ -264,16 +281,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     alignSelf: 'center',
-    backgroundColor: Colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 26,
     borderRadius: 30,
     gap: 8,
-    shadowColor: Colors.primary,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.3,
     shadowRadius: 14,
     elevation: 8,
     borderWidth: 1.5,
@@ -283,7 +299,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   fabText: {
-    color: Colors.textInverse,
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.3,

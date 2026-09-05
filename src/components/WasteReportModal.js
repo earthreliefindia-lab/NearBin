@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors } from '../theme/colors';
+import { Colors, DarkColors, LightColors } from '../theme/colors';
 
 const CATEGORIES = [
   { id: 'plastic', label: 'Plastic / Packets', icon: '🥤', color: Colors.catPlastic },
@@ -22,11 +22,25 @@ const CATEGORIES = [
 ];
 
 export default function WasteReportModal({ visible, onClose, onSubmit, userLocation, isDark = true }) {
-  const [selectedCategory, setSelectedCategory] = useState('plastic');
+  const [selectedCategories, setSelectedCategories] = useState(['plastic']); // Multi-select array
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [photoUri, setPhotoUri] = useState(null); // Initially null (empty upload thumbnail)
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const theme = isDark ? DarkColors : LightColors;
+
+  // Toggle category in multi-select array
+  const toggleCategory = (catId) => {
+    setSelectedCategories((prev) => {
+      if (prev.includes(catId)) {
+        if (prev.length === 1) return prev; // Keep at least one selected
+        return prev.filter((c) => c !== catId);
+      } else {
+        return [...prev, catId];
+      }
+    });
+  };
 
   // Launch device camera without cropping (as captured)
   const handleTakePhoto = async () => {
@@ -73,10 +87,12 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
 
     setIsSubmitting(true);
     try {
+      const primaryCat = selectedCategories[0] || 'plastic';
       await onSubmit({
-        title: title || `${selectedCategory.toUpperCase()} Waste Reported`,
+        title: title || `${primaryCat.toUpperCase()} Waste Reported`,
         description: description || 'Spotted by citizen via live camera capture.',
-        category: selectedCategory,
+        category: primaryCat,
+        categories: selectedCategories,
         latitude: userLocation?.latitude || 28.5672,
         longitude: userLocation?.longitude || 77.2435,
         address: 'Current Street Location (Mappls GPS verified)',
@@ -85,6 +101,7 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
 
       // Reset
       setPhotoUri(null);
+      setSelectedCategories(['plastic']);
       setTitle('');
       setDescription('');
       onClose();
@@ -105,18 +122,18 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={styles.overlay}>
-        <View style={styles.sheetContainer}>
+      <View style={[styles.overlay, { backgroundColor: theme.backdrop }]}>
+        <View style={[styles.sheetContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           {/* Header */}
-          <View style={styles.sheetHeader}>
-            <View style={styles.dragHandle} />
+          <View style={[styles.sheetHeader, { borderBottomColor: theme.border }]}>
+            <View style={[styles.dragHandle, { backgroundColor: theme.borderLight }]} />
             <View style={styles.headerRow}>
               <View>
-                <Text style={styles.sheetTitle}>📸 Report Public Garbage</Text>
-                <Text style={styles.sheetSubtitle}>GPS-Tagged Live Citizen Report</Text>
+                <Text style={[styles.sheetTitle, { color: theme.textPrimary }]}>📸 Report Public Garbage</Text>
+                <Text style={[styles.sheetSubtitle, { color: theme.textSecondary }]}>GPS-Tagged Live Citizen Report</Text>
               </View>
-              <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
-                <Text style={styles.closeBtnText}>✕</Text>
+              <TouchableOpacity style={[styles.closeBtn, { backgroundColor: theme.surfaceVariant }]} onPress={handleClose}>
+                <Text style={[styles.closeBtnText, { color: theme.textSecondary }]}>✕</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -124,25 +141,25 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Image Upload Area: Empty Thumbnail vs Captured Image */}
             {!photoUri ? (
-              <View style={styles.emptyUploadBox}>
-                <View style={styles.emptyIconCircle}>
+              <View style={[styles.emptyUploadBox, { backgroundColor: theme.surfaceVariant, borderColor: theme.borderLight }]}>
+                <View style={[styles.emptyIconCircle, { borderColor: theme.border }]}>
                   <Text style={styles.emptyCameraIcon}>📷</Text>
                 </View>
-                <Text style={styles.emptyTitle}>Upload Waste Photo</Text>
-                <Text style={styles.emptySubtitle}>No crop required • Pure uncut camera photo</Text>
+                <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Upload Waste Photo</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>No crop required • Pure uncut camera photo</Text>
 
                 <View style={styles.uploadButtonsRow}>
-                  <TouchableOpacity style={styles.cameraActionBtn} onPress={handleTakePhoto}>
-                    <Text style={styles.cameraActionText}>📷 Take Live Photo</Text>
+                  <TouchableOpacity style={[styles.cameraActionBtn, { backgroundColor: theme.primary }]} onPress={handleTakePhoto}>
+                    <Text style={[styles.cameraActionText, { color: theme.textInverse }]}>📷 Take Live Photo</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.galleryActionBtn} onPress={handlePickGallery}>
-                    <Text style={styles.galleryActionText}>🖼️ Choose Gallery</Text>
+                  <TouchableOpacity style={[styles.galleryActionBtn, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]} onPress={handlePickGallery}>
+                    <Text style={[styles.galleryActionText, { color: theme.textPrimary }]}>🖼️ Choose Gallery</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             ) : (
-              <View style={styles.photoBox}>
+              <View style={[styles.photoBox, { backgroundColor: theme.elevated, borderColor: theme.border }]}>
                 <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
                 
                 {/* Live GPS Watermark banner according to map */}
@@ -163,52 +180,62 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
             )}
 
             {/* Anti-Spam Notice */}
-            <View style={styles.antiSpamBadge}>
+            <View style={[styles.antiSpamBadge, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
               <Text style={styles.antiSpamIcon}>🛡️</Text>
-              <Text style={styles.antiSpamText}>
+              <Text style={[styles.antiSpamText, { color: theme.textSecondary }]}>
                 Snapchat Stories Active: Multiple photos uploaded at this same spot become part of that hotspot's live story!
               </Text>
             </View>
 
-            {/* Category Select */}
-            <Text style={styles.sectionHeading}>SELECT WASTE CATEGORY</Text>
+            {/* Category Select (Multi-Selection Allowed) */}
+            <View style={styles.categoryHeaderRow}>
+              <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>SELECT WASTE CATEGORIES</Text>
+              <View style={[styles.multiCountBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                <Text style={[styles.multiCountText, { color: theme.primary }]}>{selectedCategories.length} SELECTED</Text>
+              </View>
+            </View>
             <View style={styles.categoryGrid}>
               {CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory === cat.id;
+                const isSelected = selectedCategories.includes(cat.id);
                 return (
                   <TouchableOpacity
                     key={cat.id}
                     style={[
                       styles.categoryCard,
-                      isSelected && { borderColor: cat.color, backgroundColor: 'rgba(255,255,255,0.08)' },
+                      { backgroundColor: theme.surfaceVariant, borderColor: theme.border },
+                      isSelected && {
+                        borderColor: cat.color,
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.04)',
+                      },
                     ]}
-                    onPress={() => setSelectedCategory(cat.id)}
+                    onPress={() => toggleCategory(cat.id)}
                   >
                     <Text style={styles.catIcon}>{cat.icon}</Text>
-                    <Text style={[styles.catLabel, isSelected && { color: cat.color, fontWeight: '800' }]}>
+                    <Text style={[styles.catLabel, { color: theme.textSecondary }, isSelected && { color: cat.color, fontWeight: '800' }]}>
                       {cat.label}
                     </Text>
+                    {isSelected && <Text style={[styles.checkIcon, { color: cat.color }]}>✓</Text>}
                   </TouchableOpacity>
                 );
               })}
             </View>
 
             {/* Title / Landmark */}
-            <Text style={styles.sectionHeading}>LANDMARK / TITLE (OPTIONAL)</Text>
+            <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>LANDMARK / TITLE (OPTIONAL)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.surfaceVariant, borderColor: theme.border, color: theme.textPrimary }]}
               placeholder="e.g. Near Metro Pillar 42, behind tea stall"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={theme.textMuted}
               value={title}
               onChangeText={setTitle}
             />
 
             {/* Description */}
-            <Text style={styles.sectionHeading}>DETAILS / NOTES</Text>
+            <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>DETAILS / NOTES</Text>
             <TextInput
-              style={[styles.input, styles.textArea]}
+              style={[styles.input, styles.textArea, { backgroundColor: theme.surfaceVariant, borderColor: theme.border, color: theme.textPrimary }]}
               placeholder="Describe heap size, foul smell, blocking road, etc."
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={theme.textMuted}
               multiline
               numberOfLines={3}
               value={description}
@@ -219,18 +246,18 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
           </ScrollView>
 
           {/* Bottom Action Button */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, { backgroundColor: theme.surface, borderTopColor: theme.border }]}>
             <TouchableOpacity
-              style={[styles.submitButton, (!photoUri || isSubmitting) && { opacity: 0.5 }]}
+              style={[styles.submitButton, { backgroundColor: theme.primary }, (!photoUri || isSubmitting) && { opacity: 0.5 }]}
               onPress={handleSendReport}
               disabled={!photoUri || isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator color={Colors.textInverse} />
+                <ActivityIndicator color={theme.textInverse} />
               ) : (
                 <>
                   <Text style={styles.submitIcon}>🚀</Text>
-                  <Text style={styles.submitButtonText}>
+                  <Text style={[styles.submitButtonText, { color: theme.textInverse }]}>
                     {photoUri ? 'Publish to Live Heatmap' : 'Capture Photo First'}
                   </Text>
                 </>
@@ -471,6 +498,26 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginBottom: 10,
   },
+  categoryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  multiCountBadge: {
+    backgroundColor: 'rgba(0, 230, 118, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  multiCountText: {
+    color: Colors.primary,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -496,6 +543,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.textSecondary,
     flexShrink: 1,
+  },
+  checkIcon: {
+    fontSize: 14,
+    fontWeight: '900',
+    marginLeft: 'auto',
   },
   input: {
     backgroundColor: Colors.surfaceVariant,
