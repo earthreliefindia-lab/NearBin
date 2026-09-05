@@ -313,6 +313,6 @@ app.get('/api/user/profile/:id', (req, res) => {
   res.json({ success: true, user });
 });
 
-app.listen(PORT, () => {
-  console.log(`[NearBin Server] Running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[NearBin Server] Running on http://0.0.0.0:${PORT}`);
 });
