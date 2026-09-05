@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F1216"
+      "backgroundColor": "#0B0E14"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0F1216"
+        "backgroundColor": "#0B0E14"
       },
       "package": "com.nearbin.app",
       "permissions": [
@@ -31,6 +31,26 @@
         "WRITE_EXTERNAL_STORAGE"
       ]
     },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NearBin needs access to camera to photograph garbage for cleanup verification."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NearBin needs access to photos for cleanup verification proof."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "NearBin uses your location to pinpoint garbage hotspots on Mappls map."
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"

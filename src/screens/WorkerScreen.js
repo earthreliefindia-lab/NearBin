@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Modal, Alert, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, CategoryMeta } from '../theme/colors';
 
 const AFTER_SAMPLE_PHOTOS = [
@@ -10,7 +11,7 @@ const AFTER_SAMPLE_PHOTOS = [
 export default function WorkerScreen({ hotspots, onUpdateStatus }) {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [afterPhotoIndex, setAfterPhotoIndex] = useState(0);
+  const [afterPhotoUri, setAfterPhotoUri] = useState(AFTER_SAMPLE_PHOTOS[0]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Filter tasks that need cleanup or are recently cleaned
@@ -18,12 +19,33 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
   const completedTasks = hotspots.filter((h) => h.status === 'cleaned');
 
   const [activeTab, setActiveTab] = useState('pending');
-
   const displayedTasks = activeTab === 'pending' ? pendingTasks : completedTasks;
 
   const handleOpenCleanModal = (task) => {
     setSelectedTask(task);
+    setAfterPhotoUri(AFTER_SAMPLE_PHOTOS[0]);
     setIsModalVisible(true);
+  };
+
+  // Launch camera for worker proof
+  const handleTakeProofPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission', 'Camera access needed to capture cleanup proof.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.7,
+        aspect: [4, 3],
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setAfterPhotoUri(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.log('Worker camera error:', e);
+    }
   };
 
   const handleConfirmClean = async () => {
@@ -33,7 +55,7 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
       await onUpdateStatus(selectedTask.id, {
         status: 'cleaned',
         cleanedBy: 'MCD Safai Mitra - Unit 9',
-        afterPhoto: AFTER_SAMPLE_PHOTOS[afterPhotoIndex],
+        afterPhoto: afterPhotoUri,
       });
       setIsModalVisible(false);
       setSelectedTask(null);
@@ -119,7 +141,7 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
               style={[styles.btn, styles.cleanBtn]}
               onPress={() => handleOpenCleanModal(item)}
             >
-              <Text style={styles.cleanBtnText}>📸 Upload After Photo & Resolve</Text>
+              <Text style={styles.cleanBtnText}>📸 Upload Proof & Resolve</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -185,12 +207,12 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
             </Text>
 
             <View style={styles.afterPhotoBox}>
-              <Image source={{ uri: AFTER_SAMPLE_PHOTOS[afterPhotoIndex] }} style={styles.afterImage} />
+              <Image source={{ uri: afterPhotoUri }} style={styles.afterImage} />
               <TouchableOpacity
                 style={styles.cyclePhotoBtn}
-                onPress={() => setAfterPhotoIndex((prev) => (prev + 1) % AFTER_SAMPLE_PHOTOS.length)}
+                onPress={handleTakeProofPhoto}
               >
-                <Text style={styles.cyclePhotoText}>🔄 Switch Camera Angle</Text>
+                <Text style={styles.cyclePhotoText}>📷 Snap Live Photo</Text>
               </TouchableOpacity>
             </View>
 

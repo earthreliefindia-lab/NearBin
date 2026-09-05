@@ -1,13 +1,55 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INITIAL_HOTSPOTS } from '../data/mockData';
 
-// Fallback in-memory state for pure offline / standalone execution
-let localHotspots = [...INITIAL_HOTSPOTS];
-
+const STORAGE_KEY = '@nearbin_hotspots_v1';
 const API_BASE = 'http://localhost:3001/api';
 
+// Helper: Haversine distance in meters
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// In-memory cache
+let cachedHotspots = null;
+
+async function getStoredHotspots() {
+  if (cachedHotspots) return cachedHotspots;
+  try {
+    const raw = await AsyncStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      cachedHotspots = JSON.parse(raw);
+      return cachedHotspots;
+    }
+  } catch (e) {
+    console.log('[Storage] Read error:', e);
+  }
+  cachedHotspots = [...INITIAL_HOTSPOTS];
+  await saveStoredHotspots(cachedHotspots);
+  return cachedHotspots;
+}
+
+async function saveStoredHotspots(data) {
+  cachedHotspots = data;
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.log('[Storage] Write error:', e);
+  }
+}
+
 export const WasteService = {
-  // Fetch hotspots with optional filter
+  // Fetch hotspots with filter & distance
   async getHotspots(params = {}) {
+    // 1. Try fetching from remote/local server if reachable
     try {
       const query = new URLSearchParams();
       if (params.category && params.category !== 'all') query.append('category', params.category);
@@ -18,58 +60,84 @@ export const WasteService = {
         query.append('lng', params.lng);
       }
 
-      const res = await fetch(`${API_BASE}/hotspots?${query.toString()}`, { signal: AbortSignal.timeout(3000) });
+      const res = await fetch(`${API_BASE}/hotspots?${query.toString()}`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) {
         const data = await res.json();
-        localHotspots = data.hotspots;
-        return data.hotspots;
+        if (data.hotspots && data.hotspots.length > 0) {
+          await saveStoredHotspots(data.hotspots);
+          return data.hotspots;
+        }
       }
     } catch (e) {
-      console.log('[WasteService] Using local fallback state:', e.message);
+      // Server unreachable, fallback to local storage
     }
 
-    // Local in-memory fallback
-    let filtered = [...localHotspots];
+    // 2. Local persistent storage fallback
+    let list = await getStoredHotspots();
+
     if (params.category && params.category !== 'all') {
-      filtered = filtered.filter(h => h.category === params.category);
+      list = list.filter(h => h.category === params.category);
     }
     if (params.status && params.status !== 'all') {
-      filtered = filtered.filter(h => h.status === params.status);
+      list = list.filter(h => h.status === params.status);
     }
     if (params.recyclablesOnly) {
-      filtered = filtered.filter(h => ['plastic', 'scrap'].includes(h.category) && h.status !== 'cleaned');
+      list = list.filter(h => ['plastic', 'scrap'].includes(h.category) && h.status !== 'cleaned');
     }
-    return filtered;
+
+    if (params.lat && params.lng) {
+      const uLat = parseFloat(params.lat);
+      const uLng = parseFloat(params.lng);
+      list = list.map(h => ({
+        ...h,
+        distanceMeters: Math.round(getDistanceMeters(uLat, uLng, h.latitude, h.longitude))
+      }));
+      list.sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
+    }
+
+    return list;
   },
 
   // Submit report with duplicate / anti-spam logic
   async submitReport(newReport) {
-    try {
-      const res = await fetch(`${API_BASE}/reports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newReport),
-        signal: AbortSignal.timeout(4000)
-      });
-      if (res.ok) {
-        return await res.json();
-      }
-    } catch (e) {
-      console.log('[WasteService] Submitting to local fallback:', e.message);
+    const list = await getStoredHotspots();
+    const lat = parseFloat(newReport.latitude) || 28.5672;
+    const lng = parseFloat(newReport.longitude) || 77.2435;
+
+    // Check duplicate within 25 meters
+    const existing = list.find(h => {
+      if (h.status === 'cleaned') return false;
+      return getDistanceMeters(lat, lng, h.latitude, h.longitude) <= 25;
+    });
+
+    if (existing) {
+      existing.upvotes = (existing.upvotes || 1) + 1;
+      if (existing.upvotes >= 15) existing.urgency = 'critical';
+      else if (existing.upvotes >= 8) existing.urgency = 'high';
+      await saveStoredHotspots(list);
+
+      // Async background server sync
+      fetch(`${API_BASE}/reports/${existing.id}/upvote`, { method: 'POST' }).catch(() => {});
+
+      return {
+        success: true,
+        merged: true,
+        message: 'A report already exists at this spot! Recorded as a High-Priority Upvote (+1).',
+        hotspot: existing
+      };
     }
 
-    // Local fallback creation
     const created = {
       id: `nb-${Date.now().toString(36)}`,
-      title: newReport.title || `${newReport.category.toUpperCase()} Dump Spot`,
+      title: newReport.title || `${(newReport.category || 'Waste').toUpperCase()} Dump Spotted`,
       description: newReport.description || 'Reported via camera.',
-      category: newReport.category || 'plastic',
+      category: (newReport.category || 'plastic').toLowerCase(),
       status: 'reported',
       urgency: 'medium',
       upvotes: 1,
-      latitude: newReport.latitude || 28.5680,
-      longitude: newReport.longitude || 77.2420,
-      address: newReport.address || 'Street near report point',
+      latitude: lat,
+      longitude: lng,
+      address: newReport.address || 'GPS verified on Mappls',
       beforePhoto: newReport.beforePhoto,
       afterPhoto: null,
       reportedBy: newReport.reportedBy || 'Concerned Citizen',
@@ -79,27 +147,35 @@ export const WasteService = {
       claimedBy: null
     };
 
-    localHotspots = [created, ...localHotspots];
-    return { success: true, hotspot: created, merged: false, message: 'Report saved successfully!' };
+    const updated = [created, ...list];
+    await saveStoredHotspots(updated);
+
+    // Background server sync
+    fetch(`${API_BASE}/reports`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(created)
+    }).catch(() => {});
+
+    return {
+      success: true,
+      merged: false,
+      message: 'Report published to live heatmap!',
+      hotspot: created
+    };
   },
 
   // Upvote / Confirm hotspot
   async upvoteHotspot(id) {
-    try {
-      const res = await fetch(`${API_BASE}/reports/${id}/upvote`, {
-        method: 'POST',
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.log('[WasteService] Local upvote fallback');
-    }
-
-    const item = localHotspots.find(h => h.id === id);
+    const list = await getStoredHotspots();
+    const item = list.find(h => h.id === id);
     if (item) {
       item.upvotes = (item.upvotes || 0) + 1;
       if (item.upvotes >= 15) item.urgency = 'critical';
       else if (item.upvotes >= 8) item.urgency = 'high';
+      await saveStoredHotspots(list);
+
+      fetch(`${API_BASE}/reports/${id}/upvote`, { method: 'POST' }).catch(() => {});
       return { success: true, hotspot: item };
     }
     return { success: false };
@@ -107,19 +183,8 @@ export const WasteService = {
 
   // Update Status (Govt Worker cleanup proof)
   async updateStatus(id, { status, cleanedBy, afterPhoto }) {
-    try {
-      const res = await fetch(`${API_BASE}/reports/${id}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, cleanedBy, afterPhoto }),
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.log('[WasteService] Local status update fallback');
-    }
-
-    const item = localHotspots.find(h => h.id === id);
+    const list = await getStoredHotspots();
+    const item = list.find(h => h.id === id);
     if (item) {
       item.status = status;
       if (status === 'cleaned') {
@@ -130,6 +195,14 @@ export const WasteService = {
       } else if (status === 'in_progress') {
         item.cleanedBy = cleanedBy || 'Govt Safai Mitra Squad';
       }
+      await saveStoredHotspots(list);
+
+      fetch(`${API_BASE}/reports/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, cleanedBy, afterPhoto })
+      }).catch(() => {});
+
       return { success: true, hotspot: item };
     }
     return { success: false };
@@ -137,21 +210,18 @@ export const WasteService = {
 
   // Claim recyclables (Kabadiwala mode)
   async claimRecyclables(id, claimedBy) {
-    try {
-      const res = await fetch(`${API_BASE}/reports/${id}/claim`, {
+    const list = await getStoredHotspots();
+    const item = list.find(h => h.id === id);
+    if (item) {
+      item.claimedBy = claimedBy || 'Local Scrap Collector';
+      await saveStoredHotspots(list);
+
+      fetch(`${API_BASE}/reports/${id}/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ claimedBy }),
-        signal: AbortSignal.timeout(3000)
-      });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.log('[WasteService] Local claim fallback');
-    }
+        body: JSON.stringify({ claimedBy })
+      }).catch(() => {});
 
-    const item = localHotspots.find(h => h.id === id);
-    if (item) {
-      item.claimedBy = claimedBy || 'Scrap Collector';
       return { success: true, hotspot: item };
     }
     return { success: false };
@@ -159,18 +229,12 @@ export const WasteService = {
 
   // Stats
   async getStats() {
-    try {
-      const res = await fetch(`${API_BASE}/stats`, { signal: AbortSignal.timeout(3000) });
-      if (res.ok) return await res.json();
-    } catch (e) {
-      console.log('[WasteService] Local stats fallback');
-    }
-
-    const total = localHotspots.length;
-    const cleaned = localHotspots.filter(h => h.status === 'cleaned').length;
-    const inProgress = localHotspots.filter(h => h.status === 'in_progress').length;
-    const reported = localHotspots.filter(h => h.status === 'reported').length;
-    const recyclables = localHotspots.filter(h => ['plastic', 'scrap'].includes(h.category)).length;
+    const list = await getStoredHotspots();
+    const total = list.length;
+    const cleaned = list.filter(h => h.status === 'cleaned').length;
+    const inProgress = list.filter(h => h.status === 'in_progress').length;
+    const reported = list.filter(h => h.status === 'reported').length;
+    const recyclables = list.filter(h => ['plastic', 'scrap'].includes(h.category)).length;
 
     return {
       success: true,

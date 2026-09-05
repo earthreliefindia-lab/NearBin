@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
+import * as Location from 'expo-location';
 import { Colors } from './src/theme/colors';
 import { WasteService } from './src/services/api';
 
@@ -28,20 +29,42 @@ export default function App() {
   const [stats, setStats] = useState(null);
   const [userLocation, setUserLocation] = useState({ latitude: 28.5672, longitude: 77.2435 });
 
-  // Load initial hotspots & stats
-  const loadData = async () => {
+  // Load real device location & data
+  const loadData = async (coords = null) => {
     try {
-      const data = await WasteService.getHotspots();
+      const loc = coords || userLocation;
+      const data = await WasteService.getHotspots({ lat: loc.latitude, lng: loc.longitude });
       setHotspots(data || []);
       const s = await WasteService.getStats();
       setStats(s?.stats || null);
     } catch (e) {
-      console.log('Error loading initial data:', e);
+      console.log('Error loading data:', e);
     }
   };
 
   useEffect(() => {
-    loadData();
+    (async () => {
+      // 1. Initial data load
+      await loadData();
+
+      // 2. Request hardware GPS permission on Android
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          if (loc && loc.coords) {
+            const currentCoords = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            };
+            setUserLocation(currentCoords);
+            await loadData(currentCoords);
+          }
+        }
+      } catch (err) {
+        console.log('Location acquisition skipped:', err?.message);
+      }
+    })();
   }, []);
 
   // Handle citizen reporting

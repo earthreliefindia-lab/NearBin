@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../theme/colors';
 
 const CATEGORIES = [
@@ -31,13 +32,55 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
   const [selectedCategory, setSelectedCategory] = useState('plastic');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [photoIndex, setPhotoIndex] = useState(0);
+  const [photoUri, setPhotoUri] = useState(SAMPLE_PHOTOS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const currentPhoto = SAMPLE_PHOTOS[photoIndex];
+  // Launch device camera
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Camera Permission', 'Please grant camera access to photograph the garbage dump.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.7,
+        aspect: [4, 3],
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.log('Camera error:', e);
+      // Fallback: cycle sample photos
+      handleCycleSample();
+    }
+  };
 
-  const handleNextPhoto = () => {
-    setPhotoIndex((prev) => (prev + 1) % SAMPLE_PHOTOS.length);
+  // Select from gallery
+  const handlePickGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+        aspect: [4, 3],
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.log('Gallery pick error:', e);
+      handleCycleSample();
+    }
+  };
+
+  // Cycle sample demo photos
+  const handleCycleSample = () => {
+    const currentIndex = SAMPLE_PHOTOS.indexOf(photoUri);
+    const nextIndex = (currentIndex + 1) % SAMPLE_PHOTOS.length;
+    setPhotoUri(SAMPLE_PHOTOS[nextIndex]);
   };
 
   const handleSendReport = async () => {
@@ -50,7 +93,7 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
         latitude: userLocation?.latitude || 28.5672,
         longitude: userLocation?.longitude || 77.2435,
         address: 'Current Street Location (Mappls GPS verified)',
-        beforePhoto: currentPhoto,
+        beforePhoto: photoUri,
       });
 
       // Reset
@@ -85,23 +128,34 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
             {/* Live Camera / Photo Preview with GPS Tag watermark */}
             <View style={styles.photoBox}>
-              <Image source={{ uri: currentPhoto }} style={styles.photoPreview} />
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
               
               <View style={styles.gpsWatermark}>
                 <Text style={styles.gpsText}>📍 GPS: {userLocation?.latitude?.toFixed(4)}, {userLocation?.longitude?.toFixed(4)}</Text>
                 <Text style={styles.gpsAccuracy}>Accuracy: ±3.8m • Mappls Verified</Text>
               </View>
 
-              <TouchableOpacity style={styles.snapOverlayBtn} onPress={handleNextPhoto}>
-                <Text style={styles.snapOverlayText}>📷 Retake / Cycle Sample</Text>
-              </TouchableOpacity>
+              {/* Photo Options Bar */}
+              <View style={styles.photoButtonsRow}>
+                <TouchableOpacity style={styles.snapOverlayBtn} onPress={handleTakePhoto}>
+                  <Text style={styles.snapOverlayText}>📷 Live Camera</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.snapOverlayBtn} onPress={handlePickGallery}>
+                  <Text style={styles.snapOverlayText}>🖼️ Gallery</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.snapOverlayBtn} onPress={handleCycleSample}>
+                  <Text style={styles.snapOverlayText}>🔄 Demo</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Anti-Spam Notice */}
             <View style={styles.antiSpamBadge}>
               <Text style={styles.antiSpamIcon}>🛡️</Text>
               <Text style={styles.antiSpamText}>
-                Anti-Duplicate Active: If someone already reported this within 25m, your upload turns into a high-priority upvote.
+                Anti-Duplicate Active: If someone already reported this within 25m, your upload automatically increments the priority as an Upvote (+1).
               </Text>
             </View>
 
@@ -238,7 +292,7 @@ const styles = StyleSheet.create({
   },
   photoBox: {
     width: '100%',
-    height: 180,
+    height: 190,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: Colors.elevated,
@@ -272,16 +326,20 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 1,
   },
-  snapOverlayBtn: {
+  photoButtonsRow: {
     position: 'absolute',
     top: 10,
     right: 10,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  snapOverlayBtn: {
+    backgroundColor: 'rgba(11, 14, 20, 0.85)',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   snapOverlayText: {
     color: Colors.white,
