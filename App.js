@@ -11,6 +11,7 @@ import MapScreen from './src/screens/MapScreen';
 import FeedScreen from './src/screens/FeedScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import AuthModal from './src/components/AuthModal';
+import OnboardingModal from './src/components/OnboardingModal';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('map'); // 'map' | 'feed' | 'menu'
@@ -19,9 +20,10 @@ export default function App() {
   const [stats, setStats] = useState(null);
   const [userLocation, setUserLocation] = useState({ latitude: 28.5672, longitude: 77.2435 });
   
-  // Mandatory User Authentication State
+  // Mandatory User Authentication & Skippable Tutorial State
   const [user, setUser] = useState(null);
   const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [tutorialVisible, setTutorialVisible] = useState(false);
 
   const activeColors = isDark ? DarkColors : LightColors;
   const paperTheme = isDark
@@ -60,7 +62,15 @@ export default function App() {
   // Check saved user session & load initial data
   useEffect(() => {
     (async () => {
-      // 1. Session check & instant server sync
+      // 1. First-Time Skippable Tutorial Check
+      try {
+        const tutorialSeen = await AsyncStorage.getItem('@nearbin_tutorial_seen');
+        if (!tutorialSeen) {
+          setTutorialVisible(true);
+        }
+      } catch (e) {}
+
+      // 2. Session check & instant server sync
       try {
         const saved = await AsyncStorage.getItem('@nearbin_user');
         if (saved) {
@@ -244,6 +254,7 @@ export default function App() {
               user={user}
               onUpdateProfile={handleUpdateProfile}
               onLogout={handleLogout}
+              onReplayTutorial={() => setTutorialVisible(true)}
             />
           )}
         </View>
@@ -281,12 +292,21 @@ export default function App() {
           })}
         </View>
 
-        {/* Mandatory Authentication Gate Modal (Google Sign-In / Phone OTP) */}
-        <AuthModal
-          visible={authModalVisible || !user}
-          onLoginSuccess={handleLoginSuccess}
+        {/* Skippable First-Time Onboarding Walkthrough */}
+        <OnboardingModal
+          visible={tutorialVisible}
+          onFinish={() => setTutorialVisible(false)}
           isDark={isDark}
         />
+
+        {/* Mandatory Authentication Gate Modal (Google Sign-In / Phone OTP) */}
+        {!tutorialVisible && (
+          <AuthModal
+            visible={authModalVisible || !user}
+            onLoginSuccess={handleLoginSuccess}
+            isDark={isDark}
+          />
+        )}
       </SafeAreaView>
     </PaperProvider>
   );

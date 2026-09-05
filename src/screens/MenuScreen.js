@@ -52,6 +52,7 @@ export default function MenuScreen({
   user,
   onUpdateProfile,
   onLogout,
+  onReplayTutorial,
 }) {
   const [activeSubScreen, setActiveSubScreen] = useState(null); // 'worker' | 'scrap' | 'about' | null
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -212,6 +213,26 @@ export default function MenuScreen({
             thumbColor={'#FFFFFF'}
           />
         </View>
+
+        {/* Replay Onboarding Tutorial */}
+        {onReplayTutorial && (
+          <TouchableOpacity
+            style={[styles.settingRowCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border, marginTop: -4 }]}
+            onPress={onReplayTutorial}
+            activeOpacity={0.8}
+          >
+            <View style={styles.settingTextCol}>
+              <View style={styles.settingIconRow}>
+                <Text style={styles.settingEmoji}>📖</Text>
+                <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>App Guide & Walkthrough</Text>
+              </View>
+              <Text style={[styles.settingSub, { color: theme.textSecondary }]}>
+                Replay features, camera GPS guide & role tutorials
+              </Text>
+            </View>
+            <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 2. Operational Portals (Government & Recycler) */}
         <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>OPERATIONAL PANELS</Text>
