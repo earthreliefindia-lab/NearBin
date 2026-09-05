@@ -136,10 +136,43 @@ export default function MapplsView({
       border-radius: 50%;
       animation: userGlow 2s infinite;
     }
+
+    /* Floating GPS Target Recenter Button */
+    .map-gps-btn {
+      position: absolute;
+      bottom: 85px;
+      right: 16px;
+      width: 48px;
+      height: 48px;
+      background: #141A23;
+      border-radius: 50%;
+      border: 2px solid #2A3649;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.75);
+      cursor: pointer;
+      z-index: 1000;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .map-gps-btn:active {
+      transform: scale(0.9);
+      background: #1D2533;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div class="map-gps-btn" onclick="map.flyTo([userLat, userLng], 18, { duration: 1.2 })" title="Recenter to Current Location">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00E676" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="22" y1="12" x2="18" y2="12"></line>
+      <line x1="6" y1="12" x2="2" y2="12"></line>
+      <line x1="12" y1="6" x2="12" y2="2"></line>
+      <line x1="12" y1="22" x2="12" y2="18"></line>
+      <circle cx="12" cy="12" r="3" fill="#00E676"></circle>
+    </svg>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>

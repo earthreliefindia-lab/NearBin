@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert } from 'react-native';
 import { Colors, CategoryMeta } from '../theme/colors';
 import BeforeAfterView from './BeforeAfterView';
+import StoryViewerModal from './StoryViewerModal';
 
 export default function HotspotDetailCard({
   hotspot,
@@ -13,6 +14,7 @@ export default function HotspotDetailCard({
   onClaimRecyclables,
 }) {
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [showStoryModal, setShowStoryModal] = useState(false);
 
   if (!hotspot) return null;
 
@@ -113,6 +115,20 @@ export default function HotspotDetailCard({
 
             {/* Before vs After Photo Display */}
             <BeforeAfterView beforePhoto={hotspot.beforePhoto} afterPhoto={hotspot.afterPhoto} />
+
+            {/* Snapchat Story Button */}
+            <TouchableOpacity
+              style={styles.storyBtn}
+              onPress={() => setShowStoryModal(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.storyBtnEmoji}>⚡</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.storyBtnTitle}>Snapchat Stories at this Spot</Text>
+                <Text style={styles.storyBtnSubtitle}>Watch all citizen uploads as fullscreen stories</Text>
+              </View>
+              <Text style={styles.storyArrow}>▶</Text>
+            </TouchableOpacity>
 
             {/* Description */}
             <Text style={styles.description}>{hotspot.description}</Text>
@@ -244,6 +260,13 @@ export default function HotspotDetailCard({
           </View>
         </View>
       </View>
+
+      <StoryViewerModal
+        visible={showStoryModal}
+        hotspot={hotspot}
+        onClose={() => setShowStoryModal(false)}
+        onUpvote={handleUpvoteClick}
+      />
     </Modal>
   );
 }
@@ -429,5 +452,34 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 13,
     fontWeight: '600',
+  },
+  storyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 61, 0, 0.12)',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 61, 0, 0.35)',
+    marginVertical: 10,
+    gap: 10,
+  },
+  storyBtnEmoji: {
+    fontSize: 22,
+  },
+  storyBtnTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  storyBtnSubtitle: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
+  storyArrow: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '900',
   },
 });

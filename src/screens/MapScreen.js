@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors } from '../theme/colors';
 import MapplsView from '../components/MapplsView';
 import WasteReportModal from '../components/WasteReportModal';
@@ -22,10 +22,14 @@ export default function MapScreen({
   onClaimRecyclables,
   onSubmitReport,
   userLocation,
+  onRecenter,
+  isDark = true,
 }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedHotspot, setSelectedHotspot] = useState(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [mapKey, setMapKey] = useState(1);
 
   // Filter hotspots for map display
   const filteredHotspots = hotspots.filter((h) => {
@@ -33,6 +37,18 @@ export default function MapScreen({
     if (selectedCategory === 'cleaned') return h.status === 'cleaned';
     return h.category === selectedCategory && h.status !== 'cleaned';
   });
+
+  const handleRecenterClick = async () => {
+    setIsLocating(true);
+    try {
+      if (onRecenter) {
+        await onRecenter();
+      }
+      setMapKey((prev) => prev + 1); // Triggers instant refocus and zoom
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -69,12 +85,27 @@ export default function MapScreen({
       {/* Interactive Mappls Dark Map with Glowing Heatmap */}
       <View style={styles.mapContainer}>
         <MapplsView
+          key={mapKey}
           hotspots={filteredHotspots}
           userLocation={userLocation}
           onSelectHotspot={(spot) => setSelectedHotspot(spot)}
           selectedCategory={selectedCategory}
         />
       </View>
+
+      {/* Floating GPS Target / Accuracy Recenter Button */}
+      <TouchableOpacity
+        style={styles.gpsFab}
+        onPress={handleRecenterClick}
+        activeOpacity={0.8}
+        disabled={isLocating}
+      >
+        {isLocating ? (
+          <ActivityIndicator color={Colors.primary} size="small" />
+        ) : (
+          <Text style={styles.gpsFabIcon}>🎯</Text>
+        )}
+      </TouchableOpacity>
 
       {/* Floating Action Button (FAB) - Live Camera Report */}
       <TouchableOpacity
@@ -92,6 +123,7 @@ export default function MapScreen({
         onClose={() => setReportModalVisible(false)}
         onSubmit={onSubmitReport}
         userLocation={userLocation}
+        isDark={isDark}
       />
 
       {/* Hotspot Bottom Sheet Modal */}
@@ -102,7 +134,6 @@ export default function MapScreen({
         currentRole={currentRole}
         onUpvote={async (id) => {
           await onUpvote(id);
-          // refresh selected hotspot
           const updated = hotspots.find((h) => h.id === id);
           if (updated) setSelectedHotspot({ ...updated, upvotes: (updated.upvotes || 0) + 1 });
         }}
@@ -207,6 +238,28 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
   },
+  gpsFab: {
+    position: 'absolute',
+    bottom: 95,
+    right: 18,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#141A23',
+    borderWidth: 2,
+    borderColor: '#2A3649',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 90,
+  },
+  gpsFabIcon: {
+    fontSize: 22,
+  },
   fab: {
     position: 'absolute',
     bottom: 24,
@@ -215,7 +268,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 26,
     borderRadius: 30,
     gap: 8,
     shadowColor: Colors.primary,

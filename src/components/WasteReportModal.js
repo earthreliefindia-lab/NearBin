@@ -21,74 +21,61 @@ const CATEGORIES = [
   { id: 'debris', label: 'Debris / Malba', icon: '🧱', color: Colors.catDebris },
 ];
 
-const SAMPLE_PHOTOS = [
-  'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=600&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=600&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1605600659873-d808a13e4d2a?w=600&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1590496793929-36417d3117de?w=600&auto=format&fit=crop&q=80',
-];
-
-export default function WasteReportModal({ visible, onClose, onSubmit, userLocation }) {
+export default function WasteReportModal({ visible, onClose, onSubmit, userLocation, isDark = true }) {
   const [selectedCategory, setSelectedCategory] = useState('plastic');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [photoUri, setPhotoUri] = useState(SAMPLE_PHOTOS[0]);
+  const [photoUri, setPhotoUri] = useState(null); // Initially null (empty upload thumbnail)
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Launch device camera
+  // Launch device camera without cropping (as captured)
   const handleTakePhoto = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Camera Permission', 'Please grant camera access to photograph the garbage dump.');
+        Alert.alert('Camera Permission Required', 'Please allow camera access to photograph the garbage dump.');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        quality: 0.7,
-        aspect: [4, 3],
+        allowsEditing: false, // NO CROPPING: Full unedited photo
+        quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets[0]) {
         setPhotoUri(result.assets[0].uri);
       }
     } catch (e) {
       console.log('Camera error:', e);
-      // Fallback: cycle sample photos
-      handleCycleSample();
+      Alert.alert('Camera Error', 'Could not open camera. You can select from gallery.');
     }
   };
 
-  // Select from gallery
+  // Select from gallery without cropping
   const handlePickGallery = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.7,
-        aspect: [4, 3],
+        allowsEditing: false, // NO CROPPING
+        quality: 0.8,
       });
       if (!result.canceled && result.assets && result.assets[0]) {
         setPhotoUri(result.assets[0].uri);
       }
     } catch (e) {
       console.log('Gallery pick error:', e);
-      handleCycleSample();
     }
   };
 
-  // Cycle sample demo photos
-  const handleCycleSample = () => {
-    const currentIndex = SAMPLE_PHOTOS.indexOf(photoUri);
-    const nextIndex = (currentIndex + 1) % SAMPLE_PHOTOS.length;
-    setPhotoUri(SAMPLE_PHOTOS[nextIndex]);
-  };
-
   const handleSendReport = async () => {
+    if (!photoUri) {
+      Alert.alert('Photo Required', 'Please snap or upload a photo of the garbage to proceed.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onSubmit({
-        title: title || `${selectedCategory.toUpperCase()} Dump Spotted`,
-        description: description || 'Spotted in public pathway. Please clear urgently.',
+        title: title || `${selectedCategory.toUpperCase()} Waste Reported`,
+        description: description || 'Spotted by citizen via live camera capture.',
         category: selectedCategory,
         latitude: userLocation?.latitude || 28.5672,
         longitude: userLocation?.longitude || 77.2435,
@@ -97,6 +84,7 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
       });
 
       // Reset
+      setPhotoUri(null);
       setTitle('');
       setDescription('');
       onClose();
@@ -107,8 +95,16 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
     }
   };
 
+  const handleClose = () => {
+    setPhotoUri(null);
+    onClose();
+  };
+
+  const latText = userLocation?.latitude ? userLocation.latitude.toFixed(5) : '28.56720';
+  const lngText = userLocation?.longitude ? userLocation.longitude.toFixed(5) : '77.24350';
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.overlay}>
         <View style={styles.sheetContainer}>
           {/* Header */}
@@ -117,45 +113,60 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
             <View style={styles.headerRow}>
               <View>
                 <Text style={styles.sheetTitle}>📸 Report Public Garbage</Text>
-                <Text style={styles.sheetSubtitle}>Live GPS-tagged citizen report</Text>
+                <Text style={styles.sheetSubtitle}>GPS-Tagged Live Citizen Report</Text>
               </View>
-              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
                 <Text style={styles.closeBtnText}>✕</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Live Camera / Photo Preview with GPS Tag watermark */}
-            <View style={styles.photoBox}>
-              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-              
-              <View style={styles.gpsWatermark}>
-                <Text style={styles.gpsText}>📍 GPS: {userLocation?.latitude?.toFixed(4)}, {userLocation?.longitude?.toFixed(4)}</Text>
-                <Text style={styles.gpsAccuracy}>Accuracy: ±3.8m • Mappls Verified</Text>
+            {/* Image Upload Area: Empty Thumbnail vs Captured Image */}
+            {!photoUri ? (
+              <View style={styles.emptyUploadBox}>
+                <View style={styles.emptyIconCircle}>
+                  <Text style={styles.emptyCameraIcon}>📷</Text>
+                </View>
+                <Text style={styles.emptyTitle}>Upload Waste Photo</Text>
+                <Text style={styles.emptySubtitle}>No crop required • Pure uncut camera photo</Text>
+
+                <View style={styles.uploadButtonsRow}>
+                  <TouchableOpacity style={styles.cameraActionBtn} onPress={handleTakePhoto}>
+                    <Text style={styles.cameraActionText}>📷 Take Live Photo</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.galleryActionBtn} onPress={handlePickGallery}>
+                    <Text style={styles.galleryActionText}>🖼️ Choose Gallery</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
+            ) : (
+              <View style={styles.photoBox}>
+                <Image source={{ uri: photoUri }} style={styles.photoPreview} resizeMode="cover" />
+                
+                {/* Live GPS Watermark banner according to map */}
+                <View style={styles.gpsWatermark}>
+                  <View style={styles.gpsLiveRow}>
+                    <View style={styles.gpsPulseDot} />
+                    <Text style={styles.gpsText}>📍 GPS: {latText}° N, {lngText}° E</Text>
+                  </View>
+                  <Text style={styles.gpsAccuracy}>Accuracy: ±3.4m • Mappls Verified</Text>
+                  <Text style={styles.gpsTime}>⏰ {new Date().toLocaleTimeString()} • Uncropped Proof</Text>
+                </View>
 
-              {/* Photo Options Bar */}
-              <View style={styles.photoButtonsRow}>
-                <TouchableOpacity style={styles.snapOverlayBtn} onPress={handleTakePhoto}>
-                  <Text style={styles.snapOverlayText}>📷 Live Camera</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.snapOverlayBtn} onPress={handlePickGallery}>
-                  <Text style={styles.snapOverlayText}>🖼️ Gallery</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.snapOverlayBtn} onPress={handleCycleSample}>
-                  <Text style={styles.snapOverlayText}>🔄 Demo</Text>
+                {/* Retake Button */}
+                <TouchableOpacity style={styles.retakeBtn} onPress={() => setPhotoUri(null)}>
+                  <Text style={styles.retakeBtnText}>🔄 Retake Photo</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            )}
 
             {/* Anti-Spam Notice */}
             <View style={styles.antiSpamBadge}>
               <Text style={styles.antiSpamIcon}>🛡️</Text>
               <Text style={styles.antiSpamText}>
-                Anti-Duplicate Active: If someone already reported this within 25m, your upload automatically increments the priority as an Upvote (+1).
+                Snapchat Stories Active: Multiple photos uploaded at this same spot become part of that hotspot's live story!
               </Text>
             </View>
 
@@ -169,7 +180,7 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
                     key={cat.id}
                     style={[
                       styles.categoryCard,
-                      isSelected && { borderColor: cat.color, backgroundColor: 'rgba(255,255,255,0.06)' },
+                      isSelected && { borderColor: cat.color, backgroundColor: 'rgba(255,255,255,0.08)' },
                     ]}
                     onPress={() => setSelectedCategory(cat.id)}
                   >
@@ -186,7 +197,7 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
             <Text style={styles.sectionHeading}>LANDMARK / TITLE (OPTIONAL)</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Near Bus Stand gate, behind Chai tapri"
+              placeholder="e.g. Near Metro Pillar 42, behind tea stall"
               placeholderTextColor={Colors.textMuted}
               value={title}
               onChangeText={setTitle}
@@ -210,16 +221,18 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
           {/* Bottom Action Button */}
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[styles.submitButton, isSubmitting && { opacity: 0.6 }]}
+              style={[styles.submitButton, (!photoUri || isSubmitting) && { opacity: 0.5 }]}
               onPress={handleSendReport}
-              disabled={isSubmitting}
+              disabled={!photoUri || isSubmitting}
             >
               {isSubmitting ? (
                 <ActivityIndicator color={Colors.textInverse} />
               ) : (
                 <>
                   <Text style={styles.submitIcon}>🚀</Text>
-                  <Text style={styles.submitButtonText}>Publish to Live Heatmap</Text>
+                  <Text style={styles.submitButtonText}>
+                    {photoUri ? 'Publish to Live Heatmap' : 'Capture Photo First'}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -240,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '90%',
+    maxHeight: '92%',
     borderTopWidth: 1,
     borderColor: Colors.borderLight,
   },
@@ -290,14 +303,86 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  emptyUploadBox: {
+    width: '100%',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.elevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  emptyCameraIcon: {
+    fontSize: 28,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  uploadButtonsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  cameraActionBtn: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraActionText: {
+    color: Colors.textInverse,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  galleryActionBtn: {
+    flex: 1,
+    backgroundColor: Colors.elevated,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  galleryActionText: {
+    color: Colors.textPrimary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   photoBox: {
     width: '100%',
-    height: 190,
-    borderRadius: 16,
+    height: 220,
+    borderRadius: 18,
     overflow: 'hidden',
     backgroundColor: Colors.elevated,
     position: 'relative',
-    marginBottom: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -307,41 +392,54 @@ const styles = StyleSheet.create({
   },
   gpsWatermark: {
     position: 'absolute',
-    bottom: 10,
-    left: 10,
-    backgroundColor: 'rgba(11, 14, 20, 0.82)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    bottom: 12,
+    left: 12,
+    right: 12,
+    backgroundColor: 'rgba(11, 14, 20, 0.88)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  gpsLiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  gpsPulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
   },
   gpsText: {
     color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
   },
   gpsAccuracy: {
     color: Colors.textSecondary,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  gpsTime: {
+    color: Colors.textMuted,
     fontSize: 9,
     marginTop: 1,
   },
-  photoButtonsRow: {
+  retakeBtn: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  snapOverlayBtn: {
-    backgroundColor: 'rgba(11, 14, 20, 0.85)',
-    paddingHorizontal: 10,
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
   },
-  snapOverlayText: {
+  retakeBtnText: {
     color: Colors.white,
     fontSize: 11,
     fontWeight: '700',

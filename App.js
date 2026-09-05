@@ -1,35 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
-import { Provider as PaperProvider, MD3DarkTheme } from 'react-native-paper';
+import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import * as Location from 'expo-location';
-import { Colors } from './src/theme/colors';
+import { Colors, DarkColors, LightColors } from './src/theme/colors';
 import { WasteService } from './src/services/api';
 
 // Screens
 import MapScreen from './src/screens/MapScreen';
 import FeedScreen from './src/screens/FeedScreen';
-import WorkerScreen from './src/screens/WorkerScreen';
-import ScrapPickerScreen from './src/screens/ScrapPickerScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
-
-const theme = {
-  ...MD3DarkTheme,
-  colors: {
-    ...MD3DarkTheme.colors,
-    primary: Colors.primary,
-    background: Colors.background,
-    surface: Colors.surface,
-  },
-};
+import MenuScreen from './src/screens/MenuScreen';
 
 export default function App() {
-  const [currentTab, setCurrentTab] = useState('map');
-  const [currentRole, setCurrentRole] = useState('citizen');
+  const [currentTab, setCurrentTab] = useState('map'); // 'map' | 'feed' | 'menu'
+  const [isDark, setIsDark] = useState(true); // Dark / Light theme toggle
   const [hotspots, setHotspots] = useState([]);
   const [stats, setStats] = useState(null);
   const [userLocation, setUserLocation] = useState({ latitude: 28.5672, longitude: 77.2435 });
 
-  // Load real device location & data
+  const activeColors = isDark ? DarkColors : LightColors;
+  const paperTheme = isDark
+    ? {
+        ...MD3DarkTheme,
+        colors: {
+          ...MD3DarkTheme.colors,
+          primary: DarkColors.primary,
+          background: DarkColors.background,
+          surface: DarkColors.surface,
+        },
+      }
+    : {
+        ...MD3LightTheme,
+        colors: {
+          ...MD3LightTheme.colors,
+          primary: LightColors.primary,
+          background: LightColors.background,
+          surface: LightColors.surface,
+        },
+      };
+
+  // Load hotspots & stats
   const loadData = async (coords = null) => {
     try {
       const loc = coords || userLocation;
@@ -44,10 +53,7 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      // 1. Initial data load
       await loadData();
-
-      // 2. Request hardware GPS permission on Android
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
@@ -67,56 +73,73 @@ export default function App() {
     })();
   }, []);
 
-  // Handle citizen reporting
+  // Recenter button trigger
+  const handleRecenter = async () => {
+    try {
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      if (loc && loc.coords) {
+        const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        setUserLocation(coords);
+        await loadData(coords);
+      }
+    } catch (e) {
+      console.log('Recenter error:', e);
+    }
+  };
+
+  // Citizen report submit
   const handleSubmitReport = async (reportData) => {
     const result = await WasteService.submitReport(reportData);
     await loadData();
     return result;
   };
 
-  // Handle upvoting
+  // Upvote
   const handleUpvote = async (id) => {
     await WasteService.upvoteHotspot(id);
     await loadData();
   };
 
-  // Handle status update (Govt Worker)
+  // Govt Worker clean proof update
   const handleUpdateStatus = async (id, data) => {
     await WasteService.updateStatus(id, data);
     await loadData();
   };
 
-  // Handle recyclables claim (Scrap Picker)
+  // Kabadiwala scrap claim
   const handleClaimRecyclables = async (id, claimedBy) => {
     await WasteService.claimRecyclables(id, claimedBy);
     await loadData();
   };
 
-  // Stock Android Navigation Tabs
+  // 3-Tab Bottom Navigation (Clean Stock Android M3)
   const TABS = [
     { id: 'map', label: 'Heatmap', icon: '🗺️' },
-    { id: 'feed', label: 'Feed', icon: '📋' },
-    { id: 'worker', label: 'Safai Mitra', icon: '🚜', badge: hotspots.filter(h => h.status !== 'cleaned').length },
-    { id: 'scrap', label: 'Scrap Radar', icon: '♻️' },
-    { id: 'profile', label: 'Profile', icon: '👤' },
+    { id: 'feed', label: 'Nearby Feed', icon: '📋' },
+    { id: 'menu', label: 'Menu', icon: '⚙️' },
   ];
 
   return (
-    <PaperProvider theme={theme}>
-      <SafeAreaView style={styles.safeArea}>
-        <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
+    <PaperProvider theme={paperTheme}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: activeColors.background }]}>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={activeColors.background}
+        />
 
         {/* Screen Container */}
         <View style={styles.screenContainer}>
           {currentTab === 'map' && (
             <MapScreen
               hotspots={hotspots}
-              currentRole={currentRole}
+              currentRole="citizen"
               onUpvote={handleUpvote}
               onUpdateStatus={handleUpdateStatus}
               onClaimRecyclables={handleClaimRecyclables}
               onSubmitReport={handleSubmitReport}
               userLocation={userLocation}
+              onRecenter={handleRecenter}
+              isDark={isDark}
             />
           )}
 
@@ -126,35 +149,24 @@ export default function App() {
               onUpvote={handleUpvote}
               onUpdateStatus={handleUpdateStatus}
               onClaimRecyclables={handleClaimRecyclables}
-              currentRole={currentRole}
+              currentRole="citizen"
             />
           )}
 
-          {currentTab === 'worker' && (
-            <WorkerScreen
+          {currentTab === 'menu' && (
+            <MenuScreen
+              stats={stats}
+              isDark={isDark}
+              onToggleTheme={() => setIsDark((prev) => !prev)}
               hotspots={hotspots}
               onUpdateStatus={handleUpdateStatus}
-            />
-          )}
-
-          {currentTab === 'scrap' && (
-            <ScrapPickerScreen
-              hotspots={hotspots}
               onClaimRecyclables={handleClaimRecyclables}
-            />
-          )}
-
-          {currentTab === 'profile' && (
-            <ProfileScreen
-              currentRole={currentRole}
-              onSelectRole={(role) => setCurrentRole(role)}
-              stats={stats}
             />
           )}
         </View>
 
         {/* Stock Android Material 3 Bottom Navigation Bar */}
-        <View style={styles.bottomNav}>
+        <View style={[styles.bottomNav, { backgroundColor: activeColors.surface, borderTopColor: activeColors.border }]}>
           {TABS.map((tab) => {
             const isActive = currentTab === tab.id;
             return (
@@ -162,17 +174,23 @@ export default function App() {
                 key={tab.id}
                 style={styles.navItem}
                 onPress={() => setCurrentTab(tab.id)}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
               >
-                <View style={[styles.navIconContainer, isActive && styles.navIconActive]}>
+                <View
+                  style={[
+                    styles.navIconContainer,
+                    isActive && { backgroundColor: activeColors.primaryContainer },
+                  ]}
+                >
                   <Text style={styles.navIcon}>{tab.icon}</Text>
-                  {!!tab.badge && tab.badge > 0 && (
-                    <View style={styles.navBadge}>
-                      <Text style={styles.navBadgeText}>{tab.badge}</Text>
-                    </View>
-                  )}
                 </View>
-                <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+                <Text
+                  style={[
+                    styles.navLabel,
+                    { color: isActive ? activeColors.primary : activeColors.textMuted },
+                    isActive && { fontWeight: '800' },
+                  ]}
+                >
                   {tab.label}
                 </Text>
               </TouchableOpacity>
@@ -187,16 +205,13 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   screenContainer: {
     flex: 1,
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: Colors.surface,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
     paddingVertical: 8,
     paddingBottom: Platform.OS === 'ios' ? 24 : 10,
     justifyContent: 'space-around',
@@ -208,41 +223,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   navIconContainer: {
-    width: 52,
+    width: 54,
     height: 32,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  navIconActive: {
-    backgroundColor: Colors.primaryContainer,
   },
   navIcon: {
-    fontSize: 18,
-  },
-  navBadge: {
-    position: 'absolute',
-    top: -2,
-    right: 6,
-    backgroundColor: Colors.critical,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 8,
-  },
-  navBadgeText: {
-    color: Colors.white,
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 19,
   },
   navLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: Colors.textMuted,
     marginTop: 3,
-  },
-  navLabelActive: {
-    color: Colors.primary,
-    fontWeight: '800',
   },
 });

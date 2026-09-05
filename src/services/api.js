@@ -114,6 +114,18 @@ export const WasteService = {
       existing.upvotes = (existing.upvotes || 1) + 1;
       if (existing.upvotes >= 15) existing.urgency = 'critical';
       else if (existing.upvotes >= 8) existing.urgency = 'high';
+
+      if (!existing.photos) existing.photos = [];
+      if (newReport.beforePhoto) {
+        existing.photos.push({
+          id: `p-${Date.now()}`,
+          uri: newReport.beforePhoto,
+          reportedBy: newReport.reportedBy || 'Concerned Citizen',
+          reportedAt: new Date().toISOString(),
+          caption: newReport.description || newReport.title || 'Additional dump spotted here',
+        });
+      }
+
       await saveStoredHotspots(list);
 
       // Async background server sync
@@ -122,7 +134,7 @@ export const WasteService = {
       return {
         success: true,
         merged: true,
-        message: 'A report already exists at this spot! Recorded as a High-Priority Upvote (+1).',
+        message: 'A report already exists at this spot! Added to the live Snapchat Story of this spot (+1 Upvote).',
         hotspot: existing
       };
     }
@@ -140,6 +152,15 @@ export const WasteService = {
       address: newReport.address || 'GPS verified on Mappls',
       beforePhoto: newReport.beforePhoto,
       afterPhoto: null,
+      photos: [
+        {
+          id: `p-${Date.now()}`,
+          uri: newReport.beforePhoto,
+          reportedBy: newReport.reportedBy || 'Concerned Citizen',
+          reportedAt: new Date().toISOString(),
+          caption: newReport.title || 'Initial garbage spot',
+        },
+      ],
       reportedBy: newReport.reportedBy || 'Concerned Citizen',
       reportedAt: new Date().toISOString(),
       cleanedAt: null,
