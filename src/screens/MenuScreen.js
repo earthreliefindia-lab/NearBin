@@ -53,6 +53,7 @@ export default function MenuScreen({
   onUpdateProfile,
   onLogout,
   onReplayTutorial,
+  onOpenInstall,
 }) {
   const [activeSubScreen, setActiveSubScreen] = useState(null); // 'worker' | 'scrap' | 'about' | null
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -228,6 +229,26 @@ export default function MenuScreen({
               </View>
               <Text style={[styles.settingSub, { color: theme.textSecondary }]}>
                 Replay features, camera GPS guide & role tutorials
+              </Text>
+            </View>
+            <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Install App on Device (PWA / APK) */}
+        {onOpenInstall && (
+          <TouchableOpacity
+            style={[styles.settingRowCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border, marginTop: -4 }]}
+            onPress={onOpenInstall}
+            activeOpacity={0.8}
+          >
+            <View style={styles.settingTextCol}>
+              <View style={styles.settingIconRow}>
+                <Text style={styles.settingEmoji}>📲</Text>
+                <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>Install NearBin App</Text>
+              </View>
+              <Text style={[styles.settingSub, { color: theme.textSecondary }]}>
+                Add 0 MB Lite App to Home Screen or Download Standalone APK
               </Text>
             </View>
             <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>

@@ -12,7 +12,7 @@ import FeedScreen from './src/screens/FeedScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import AuthModal from './src/components/AuthModal';
 import OnboardingModal from './src/components/OnboardingModal';
-import PWAInstallBanner from './src/components/PWAInstallBanner';
+import SmartInstallModal from './src/components/SmartInstallModal';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('map'); // 'map' | 'feed' | 'menu'
@@ -25,6 +25,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [tutorialVisible, setTutorialVisible] = useState(false);
+  const [installModalVisible, setInstallModalVisible] = useState(false);
 
   const activeColors = isDark ? DarkColors : LightColors;
   const paperTheme = isDark
@@ -267,6 +268,7 @@ export default function App() {
               onUpdateProfile={handleUpdateProfile}
               onLogout={handleLogout}
               onReplayTutorial={() => setTutorialVisible(true)}
+              onOpenInstall={() => setInstallModalVisible(true)}
             />
           )}
         </View>
@@ -320,8 +322,12 @@ export default function App() {
           />
         )}
 
-        {/* PWA 1-Tap Home Screen Installation Prompt */}
-        <PWAInstallBanner isDark={isDark} />
+        {/* Universal Smart Install Popup (PWA, Android APK, iOS) */}
+        <SmartInstallModal
+          isDark={isDark}
+          forceVisible={installModalVisible}
+          onClose={() => setInstallModalVisible(false)}
+        />
       </SafeAreaView>
     </PaperProvider>
   );
@@ -330,6 +336,9 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 680 : undefined,
+    alignSelf: 'center',
   },
   screenContainer: {
     flex: 1,
