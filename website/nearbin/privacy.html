@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | NearBin &mdash; Earth Relief India</title>
+
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description" content="NearBin Privacy Policy. Learn how Earth Relief India protects user data, Google account information, GPS location, and camera permissions in compliance with Google Cloud standards." />
+  <meta name="keywords" content="NearBin Privacy Policy, Earth Relief India, Keshav Singh, Google OAuth Privacy, Data Protection, Swachh Bharat civic app" />
+  <meta property="og:title" content="NearBin Privacy Policy | Earth Relief India" />
+  <meta property="og:description" content="Privacy Policy for NearBin civic waste reporting platform by Earth Relief India." />
+  <meta property="og:url" content="https://earthrelief.in/nearbin/privacy.html" />
+  <meta name="theme-color" content="#00E676" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2226%22>🌱</text></svg>" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --primary: #00E676;
+      --primary-dark: #00B359;
+      --primary-glow: rgba(0, 230, 118, 0.22);
+      --bg: #0B0F12;
+      --surface: #141B20;
+      --surface-elevated: #1D262D;
+      --border: #2A3640;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent-blue: #2979FF;
+      --accent-badge: rgba(0, 230, 118, 0.12);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Glow */
+    .ambient-glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, rgba(11, 15, 18, 0) 70%);
+      top: -150px;
+      right: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header / Nav */
+    header {
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 15, 18, 0.88);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #00E676, #00B359);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+
+    .brand-text h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text span {
+      font-size: 11px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .nav-btn {
+      background: var(--surface-elevated);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Policy Content */
+    .policy-hero {
+      padding: 48px 0 32px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      background: var(--accent-badge);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .policy-hero h2 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      color: #FFFFFF;
+    }
+
+    .policy-meta {
+      font-size: 14px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .policy-meta strong {
+      color: var(--text);
+    }
+
+    .policy-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    .policy-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .policy-card p {
+      font-size: 15px;
+      color: #CBD5E1;
+      margin-bottom: 14px;
+    }
+
+    .policy-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .policy-card ul {
+      margin: 12px 0 16px 24px;
+      color: #CBD5E1;
+      font-size: 15px;
+    }
+
+    .policy-card li {
+      margin-bottom: 8px;
+    }
+
+    /* Google Compliance Alert Callout */
+    .callout-compliance {
+      background: rgba(41, 121, 255, 0.08);
+      border-left: 4px solid var(--accent-blue);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 18px 0;
+      color: #E2E8F0;
+    }
+
+    .callout-compliance strong {
+      color: #60A5FA;
+    }
+
+    .callout-green {
+      background: rgba(0, 230, 118, 0.08);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 18px 0;
+      color: #E2E8F0;
+    }
+
+    .contact-box {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-top: 14px;
+    }
+
+    .contact-box a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .contact-box a:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      margin-top: 48px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      margin: 0 8px;
+    }
+
+    footer a:hover {
+      color: var(--primary);
+    }
+
+    @media (max-width: 640px) {
+      .policy-hero h2 {
+        font-size: 28px;
+      }
+      .policy-card {
+        padding: 20px;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-inner">
+      <a href="index.html" class="brand">
+        <div class="brand-logo">🌱</div>
+        <div class="brand-text">
+          <h1>NearBin</h1>
+          <span>Earth Relief India</span>
+        </div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="terms.html">Terms & Conditions</a>
+        <a href="privacy.html" style="color: var(--primary);">Privacy Policy</a>
+      </nav>
+
+      <a href="index.html" class="nav-btn">← Back to Overview</a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <div class="policy-hero">
+      <div class="badge">🔒 Official Legal Notice</div>
+      <h2>Privacy Policy</h2>
+      <div class="policy-meta">
+        <div>Effective Date: <strong>September 7, 2026</strong></div>
+        <div>Last Updated: <strong>September 7, 2026</strong></div>
+        <div>Entity: <strong>Earth Relief India</strong></div>
+      </div>
+    </div>
+
+    <!-- Section 1: Overview & Identity -->
+    <section class="policy-card">
+      <h3>1. Introduction & Who We Are</h3>
+      <p>
+        Welcome to <strong>NearBin</strong> ("we", "our", or "the App"), an open civic waste reporting and environmental intelligence platform conceived and operated by <strong>Earth Relief India</strong>, founded and directed by <strong>Keshav Singh</strong>.
+      </p>
+      <p>
+        Earth Relief India is an eco-technology initiative dedicated to eliminating single-use plastics through 100% biodegradable and compostable materials and empowering citizens, sanitation workers (Safai Mitras), and scrap recyclers (Kabadiwalas) through digital tools to keep Indian neighborhoods clean.
+      </p>
+      <p>
+        This Privacy Policy explains how we collect, use, store, and safeguard your personal data when you access or use NearBin via our web applications, Progressive Web App (PWA), or Android mobile application. By using NearBin, you agree to the practices described in this policy.
+      </p>
+    </section>
+
+    <!-- Section 2: Information We Collect -->
+    <section class="policy-card">
+      <h3>2. Information We Collect</h3>
+      <p>To deliver real-time civic waste mapping, reporting, and Swachhata Karma rewards, NearBin collects the following categories of data:</p>
+
+      <ul>
+        <li>
+          <strong>Google OAuth Account Information:</strong> When you choose to authenticate using Google Sign-In, we receive your public Google profile information including your <strong>name</strong>, <strong>primary email address</strong>, <strong>profile picture URL / avatar</strong>, and unique <strong>Google user identifier</strong>. We use this strictly to identify your account, protect against spam reports, and securely link your citizen Karma points.
+        </li>
+        <li>
+          <strong>Phone & Profile Data (Optional):</strong> If you choose to update your civic profile, you may optionally provide a display name, phone number, and municipal ward / locality name.
+        </li>
+        <li>
+          <strong>Geolocation Data (GPS):</strong> NearBin requires your device's geographical coordinates (latitude, longitude, and accuracy) when you capture and submit a public waste hotspot or view nearby cleanups on the community heatmap. Location data is captured with your explicit permission to place pins accurately on civic maps.
+        </li>
+        <li>
+          <strong>Camera & Image Data:</strong> The app requests camera access exclusively to allow you to photograph public waste sites or provide visual confirmation of completed sanitation work. NearBin does not scan or access your private photo gallery without your direct user selection.
+        </li>
+        <li>
+          <strong>Technical & Log Data:</strong> Like most web and mobile platforms, our servers automatically log technical metadata including IP addresses, browser or device types, operating system versions, and timestamps of API requests to detect errors and prevent malicious traffic.
+        </li>
+      </ul>
+    </section>
+
+    <!-- Section 3: Google API Services User Data Policy Compliance -->
+    <section class="policy-card">
+      <h3>3. Google User Data & Limited Use Disclosure</h3>
+      <p>
+        NearBin uses Google OAuth authentication services to enable fast, secure, one-tap sign-in for citizens. We place the highest priority on protecting your Google account data.
+      </p>
+
+      <div class="callout-compliance">
+        <strong>Google API Services User Data Policy Compliance:</strong><br />
+        NearBin's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" style="color: #93C5FD; text-decoration: underline;">Google API Services User Data Policy</a>, including the <strong>Limited Use</strong> requirements.
+      </div>
+
+      <ul>
+        <li>We only request access to basic Google profile and email scopes (<code>profile</code>, <code>email</code>, <code>openid</code>) required for identity verification.</li>
+        <li>We do <strong>NOT</strong> request or read sensitive Google user data such as Google Drive files, Gmail messages, Contacts, or Calendar events.</li>
+        <li>We do <strong>NOT</strong> use Google user data to build advertising profiles, nor do we serve targeted third-party advertising based on your Google profile data.</li>
+        <li>We do <strong>NOT</strong> sell, license, trade, or monetize Google user data under any circumstances.</li>
+        <li>Human agents do not read your private account credentials. Passwords are never seen or stored by NearBin; authentication is securely delegated via Google's OAuth 2.0 / Firebase infrastructure.</li>
+      </ul>
+    </section>
+
+    <!-- Section 4: How We Use Your Information -->
+    <section class="policy-card">
+      <h3>4. How We Use Your Information</h3>
+      <p>We use the collected information solely for legitimate civic and operational purposes, including:</p>
+      <ul>
+        <li>Displaying public garbage spots on the interactive Swachh Bharat community heatmap.</li>
+        <li>Routing municipal sanitation squads (Safai Mitras) and certified scrap collectors (Kabadiwalas) to reported dumpsites.</li>
+        <li>Awarding and displaying citizen Swachhata Karma points, civic leaderboard rankings, and achievement badges.</li>
+        <li>Verifying the authenticity of cleanup before-and-after imagery.</li>
+        <li>Preventing spam, false reports, harassment, and abuse of the civic platform.</li>
+        <li>Maintaining platform reliability, server performance, and bug resolution.</li>
+      </ul>
+    </section>
+
+    <!-- Section 5: Data Sharing & Third-Party Services -->
+    <section class="policy-card">
+      <h3>5. Data Sharing & Third-Party Processors</h3>
+      <p>
+        <strong>We do not sell your personal information.</strong> We only share minimal data with trusted infrastructure providers essential to operating the service:
+      </p>
+      <ul>
+        <li><strong>Google Cloud & Firebase:</strong> For OAuth user identity management and authentication tokens.</li>
+        <li><strong>Supabase / Render Cloud:</strong> For encrypted database persistence of public waste reports and citizen Karma points.</li>
+        <li><strong>OpenStreetMap / Leaflet / Mappls:</strong> For rendering open geospatial map tiles (no personal user identity is passed to map rendering layers).</li>
+        <li><strong>Government Sanitation Authorities:</strong> Public waste hotspot coordinates, timestamps, and waste photos are made accessible to municipal sanitation departments and verified scrap recyclers to facilitate prompt trash removal.</li>
+      </ul>
+    </section>
+
+    <!-- Section 6: Data Retention & Your Right to Delete Data -->
+    <section class="policy-card">
+      <h3>6. Data Retention & Account Deletion (Your Rights)</h3>
+      <p>
+        You have complete control over your personal data. You are entitled under applicable privacy regulations to review, update, export, or request permanent deletion of your data at any time.
+      </p>
+
+      <div class="callout-green">
+        <strong>How to Request Account & Data Deletion:</strong><br />
+        To delete your account and remove all personal information associated with your profile, email us at <a href="mailto:eco@earthrelief.in" style="color: var(--primary); font-weight: 700;">eco@earthrelief.in</a> or <a href="mailto:earthrelief.india@gmail.com" style="color: var(--primary); font-weight: 700;">earthrelief.india@gmail.com</a> with the subject line <em>"Account Deletion Request"</em> from the email address registered with your account.<br />
+        Upon receipt, our team will permanently delete your user profile and decouple your identity within <strong>30 days</strong>.
+      </div>
+    </section>
+
+    <!-- Section 7: Security & Encryption -->
+    <section class="policy-card">
+      <h3>7. Data Security Measures</h3>
+      <p>
+        We employ industry-standard administrative, physical, and technical safeguards to protect your personal information against unauthorized access, destruction, loss, alteration, or disclosure:
+      </p>
+      <ul>
+        <li>All network transmissions are strictly enforced over encrypted <strong>HTTPS / TLS 1.3</strong> protocols.</li>
+        <li>Database storage utilizes Row-Level Security (RLS) and encrypted database backends.</li>
+        <li>Authentication tokens are signed cryptographically and stored securely in sandboxed client storage (AsyncStorage / secure cookies).</li>
+      </ul>
+    </section>
+
+    <!-- Section 8: Children's Privacy -->
+    <section class="policy-card">
+      <h3>8. Children's Privacy</h3>
+      <p>
+        NearBin is intended for general civic use and is not directed towards children under the age of 13. We do not knowingly solicit or collect personal information from children under 13. If you believe a minor has registered an account without parental consent, please contact us immediately, and we will promptly delete the data.
+      </p>
+    </section>
+
+    <!-- Section 9: Updates to this Policy -->
+    <section class="policy-card">
+      <h3>9. Updates to This Privacy Policy</h3>
+      <p>
+        We may update this Privacy Policy periodically to reflect new platform capabilities, legal standards, or operational modifications. The updated date at the top of this document will indicate when revisions were enacted. Continued use of NearBin following notification of changes constitutes acceptance of the modified policy.
+      </p>
+    </section>
+
+    <!-- Section 10: Official Contact Details -->
+    <section class="policy-card">
+      <h3>10. Contact Us & Grievance Redressal</h3>
+      <p>
+        If you have any questions, grievances, or inquiries regarding this Privacy Policy or your personal data, please contact our designated grievance desk:
+      </p>
+
+      <div class="contact-box">
+        <p><strong>Earth Relief India</strong> (NearBin Civic Team)</p>
+        <p><strong>Founder & Managing Director:</strong> Keshav Singh</p>
+        <p><strong>Headquarters:</strong> Near Jogendra Market, Plot NO.08, Vill-Bishnulli, Dadri, Greater Noida, Uttar Pradesh 203207, India</p>
+        <p><strong>Direct Helpline / WhatsApp:</strong> <a href="https://wa.me/917838889588" target="_blank">+91 78388 89588</a></p>
+        <p><strong>Official Emails:</strong> <a href="mailto:eco@earthrelief.in">eco@earthrelief.in</a> &bull; <a href="mailto:earthrelief.india@gmail.com">earthrelief.india@gmail.com</a></p>
+        <p><strong>Website:</strong> <a href="https://earthrelief.in" target="_blank">earthrelief.in</a></p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p style="margin-bottom: 8px;">
+        &copy; 2026 <strong>Earth Relief India</strong>. NearBin &trade; is an open civic initiative. All Rights Reserved.
+      </p>
+      <p>
+        <a href="index.html">Home</a> &bull;
+        <a href="terms.html">Terms & Conditions</a> &bull;
+        <a href="privacy.html" style="color: var(--primary);">Privacy Policy</a> &bull;
+        <a href="https://earthrelief.in" target="_blank">Earth Relief India</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

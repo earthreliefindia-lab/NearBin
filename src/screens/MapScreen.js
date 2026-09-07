@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Colors, DarkColors, LightColors } from '../theme/colors';
 import MapplsView from '../components/MapplsView';
 import WasteReportModal from '../components/WasteReportModal';
 import HotspotDetailCard from '../components/HotspotDetailCard';
+import AppLogo from '../components/AppLogo';
 
 const FILTER_CHIPS = [
   { id: 'all', label: 'All Hotspots', emoji: '🔥' },
@@ -30,6 +31,8 @@ export default function MapScreen({
   user,
   onRequireAuth,
 }) {
+  const { width } = useWindowDimensions();
+  const compactHeader = width < 390;
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedHotspot, setSelectedHotspot] = useState(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -125,7 +128,7 @@ export default function MapScreen({
           <ScrollView style={styles.sidebarScroll} contentContainerStyle={styles.sidebarScrollContent}>
             {filteredHotspots.length === 0 ? (
               <View style={[styles.desktopEmptyBox, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
-                <Text style={{ fontSize: 36, marginBottom: 8 }}>🌱</Text>
+                <AppLogo size={48} style={{ marginBottom: 8 }} />
                 <Text style={[styles.desktopEmptyTitle, { color: theme.textPrimary }]}>100% Clean Slate!</Text>
                 <Text style={[styles.desktopEmptyDesc, { color: theme.textSecondary }]}>
                   No active waste dumps reported in this area. You can photograph and geotag any unattended garbage spot right now.
@@ -183,13 +186,14 @@ export default function MapScreen({
         >
           <View style={styles.headerTop}>
             <View style={styles.brandRow}>
-              <Text style={[styles.brandLogo, { color: theme.textPrimary }]}>
-                🌱 Near<Text style={{ color: theme.primary }}>Bin</Text>
-              </Text>
-              <View style={styles.liveHeatmapBadge}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>SNAP HEATMAP</Text>
-              </View>
+              <AppLogo size={30} />
+              <Text style={[styles.brandLogo, { color: theme.textPrimary }]}>Near<Text style={{ color: theme.primary }}>Bin</Text></Text>
+              {!compactHeader && (
+                <View style={styles.liveHeatmapBadge}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>LIVE MAP</Text>
+                </View>
+              )}
             </View>
 
             {/* Mobile Header Quick Actions */}
@@ -200,7 +204,9 @@ export default function MapScreen({
                   onPress={onRequireAuth}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.mobileLoginText, { color: theme.primary }]}>🔑 Sign In</Text>
+                  <Text style={[styles.mobileLoginText, { color: theme.primary }]}>
+                    {compactHeader ? '🔑 Sign in' : '🔑 Sign In'}
+                  </Text>
                 </TouchableOpacity>
               )}
               {onToggleTheme && (
@@ -284,7 +290,7 @@ export default function MapScreen({
         >
           <View style={styles.emptyHintTop}>
             <View style={[styles.emptyHintIconCircle, { backgroundColor: theme.primaryContainer }]}>
-              <Text style={styles.emptyHintIcon}>🌱</Text>
+              <AppLogo size={30} />
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.cleanBadgeRow}>
@@ -428,9 +434,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   mobileHeaderBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -439,7 +445,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    minHeight: 40,
+    paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
     gap: 4,
@@ -758,5 +765,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 });
-
-

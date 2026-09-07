@@ -1,5 +1,5 @@
 // NearBin High-Performance Universal Service Worker v1.0.0
-const CACHE_NAME = 'nearbin-pwa-v1.0.1';
+const CACHE_NAME = 'nearbin-pwa-v1.0.2';
 
 // Dynamic base resolution (supports both root nearbin.agriheal.in and /nearbin/)
 const BASE = self.registration.scope || '/';

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
+import AppLogo from './AppLogo';
 
 export default function PWAInstallBanner({ isDark = true }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -72,7 +73,7 @@ export default function PWAInstallBanner({ isDark = true }) {
     <View style={[styles.container, isDark ? styles.darkBg : styles.lightBg]}>
       <View style={styles.content}>
         <View style={styles.iconCircle}>
-          <Text style={styles.iconText}>🌱</Text>
+          <AppLogo size={38} />
         </View>
         <View style={styles.textContainer}>
           <Text style={[styles.title, isDark ? styles.textWhite : styles.textDark]}>

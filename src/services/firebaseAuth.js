@@ -11,21 +11,40 @@ import { Platform } from 'react-native';
  */
 
 export const FIREBASE_CONFIG = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDQKTD3GpA9zJjF4HRAazxH9tuEJMQz8H0',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'nearbin-ba519.firebaseapp.com',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'nearbin-ba519',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'nearbin-ba519.firebasestorage.app',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '810348191384',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:810348191384:web:50d75b6d551cbabfa7baed',
-  measurementId: 'G-14S7FNJTC7',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'input text',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'input text',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'input text',
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'input text',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 'input text',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || 'input text',
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || 'input text',
 };
 
 export const isFirebaseConfigured = () => {
-  return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey.length > 10);
+  return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'input text' && FIREBASE_CONFIG.apiKey.length > 10);
 };
 
 
 let firebaseInitialized = false;
+
+const isMobileBrowser = () => {
+  if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+  return /android|iphone|ipad|ipod|nearbinhybridapp/i.test(navigator.userAgent || '');
+};
+
+const toNearBinUser = (fbUser) => ({
+  id: fbUser.uid,
+  name: fbUser.displayName || 'Google Citizen',
+  email: fbUser.email,
+  phone: fbUser.phoneNumber || '',
+  avatar: fbUser.photoURL || '🇮🇳',
+  authProvider: 'firebase_google',
+  ward: 'Municipal Ward - Geotagged Zone',
+  role: 'citizen',
+  karma: 300,
+  verifiedReports: 0,
+  joinedAt: new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+});
 
 // Dynamically load Firebase SDK on Web
 async function ensureFirebaseWeb() {
@@ -77,6 +96,25 @@ async function ensureFirebaseWeb() {
 }
 
 export const FirebaseAuthService = {
+  /**
+   * Completes a mobile Google redirect, if the app has just returned from
+   * Google's sign-in page. Desktop popup sign-ins do not use this flow.
+   */
+  async getRedirectedGoogleUser() {
+    if (Platform.OS !== 'web') return null;
+
+    try {
+      const fb = await ensureFirebaseWeb();
+      if (!fb || !fb.auth) return null;
+
+      const result = await fb.auth().getRedirectResult();
+      return result?.user ? { success: true, user: toNearBinUser(result.user) } : null;
+    } catch (err) {
+      console.warn('[Firebase] Redirect sign-in notice:', err?.message);
+      return null;
+    }
+  },
+
   /**
    * Initializes reCAPTCHA and triggers real SMS OTP via Firebase
    */
@@ -225,24 +263,22 @@ export const FirebaseAuthService = {
       provider.addScope('profile');
       provider.addScope('email');
 
-      const result = await fb.auth().signInWithPopup(provider);
-      const fbUser = result.user;
+      let result;
+      try {
+        result = await fb.auth().signInWithPopup(provider);
+      } catch (popupErr) {
+        if (popupErr.code === 'auth/popup-blocked') {
+          console.log('[Firebase] Popup blocked, trying redirect...');
+          await fb.auth().signInWithRedirect(provider);
+          return { success: true, redirecting: true };
+        }
+        throw popupErr;
+      }
 
+      const fbUser = result.user;
       return {
         success: true,
-        user: {
-          id: fbUser.uid,
-          name: fbUser.displayName || 'Google Citizen',
-          email: fbUser.email,
-          phone: fbUser.phoneNumber || '',
-          avatar: fbUser.photoURL || '🇮🇳',
-          authProvider: 'firebase_google',
-          ward: 'Municipal Ward - Geotagged Zone',
-          role: 'citizen',
-          karma: 300,
-          verifiedReports: 0,
-          joinedAt: new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
-        },
+        user: toNearBinUser(fbUser),
       };
     } catch (err) {
       console.error('[Firebase Auth] Google Auth Error:', err);

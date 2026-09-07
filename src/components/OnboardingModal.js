@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, DarkColors, LightColors } from '../theme/colors';
+import AppLogo from './AppLogo';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -20,9 +21,9 @@ const TUTORIAL_SLIDES = [
     emoji: '🗺️',
     badge: 'LIVE DENSITY MAPPING',
     badgeColor: '#FF3D00',
-    title: 'Snapchat-Style Heatmap',
+    title: 'Live Community Map',
     description:
-      'Explore live garbage hotspots on street-level Mappls maps. Glowing heat clusters turn from Red (Critical) to Green (Cleaned). Tap any hotspot to view chronological community stories!',
+      'Explore live garbage hotspots on street-level Mappls maps. Glowing heat clusters turn from Red (Critical) to Green (Cleaned). Tap any hotspot to view community updates.',
     featurePoint: '🔥 Real-time radial shaders & one-tap 18x GPS recenter',
   },
   {
@@ -101,7 +102,8 @@ export default function OnboardingModal({ visible, onFinish, isDark = true }) {
         {/* Top Header Row with Skip Button */}
         <View style={styles.topBar}>
           <View style={styles.brandRow}>
-            <Text style={styles.brandLogo}>🌱 Near<Text style={{ color: theme.primary }}>Bin</Text></Text>
+            <AppLogo size={30} />
+            <Text style={styles.brandLogo}>Near<Text style={{ color: theme.primary }}>Bin</Text></Text>
             <View style={[styles.stepPill, { backgroundColor: theme.surfaceVariant }]}>
               <Text style={[styles.stepText, { color: theme.textSecondary }]}>
                 {currentIndex + 1} of {TUTORIAL_SLIDES.length}

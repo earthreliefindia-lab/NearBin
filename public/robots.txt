@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nearbin.agriheal.in/sitemap.xml

@@ -27,3 +27,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Temporary Unzipped & Screenshot artifacts
+Codex Image*
+hostinger-deploy-agriheal/codex*
+hostinger-deploy-agriheal/nearbin-agriheal/
+*.tmp

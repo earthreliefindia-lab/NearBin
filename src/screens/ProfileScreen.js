@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import AppLogo from '../components/AppLogo';
 import { Colors } from '../theme/colors';
 import RoleSwitcher from '../components/RoleSwitcher';
 
@@ -9,7 +10,7 @@ export default function ProfileScreen({ currentRole, onSelectRole, stats }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>🇮🇳</Text>
+          <AppLogo size={56} />
         </View>
         <Text style={styles.userName}>Keshaw Sharma</Text>
         <Text style={styles.userSubtitle}>Delhi NCT • Swachhata Champion</Text>
@@ -93,7 +94,7 @@ export default function ProfileScreen({ currentRole, onSelectRole, stats }) {
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>• Theme: Stock Android Material 3 (OLED Dark Mode)</Text>
           <Text style={styles.infoText}>• Maps Engine: Mappls (MapmyIndia Street Resolution)</Text>
-          <Text style={styles.infoText}>• Heatmap: Snapchat Radial Density Algorithm</Text>
+          <Text style={styles.infoText}>• Live map: community waste-density updates</Text>
           <Text style={styles.infoText}>• Build: NearBin v1.0.0-lite (All Android Versions)</Text>
         </View>
       </View>

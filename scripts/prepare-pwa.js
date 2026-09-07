@@ -50,7 +50,7 @@ if (fs.existsSync(expoJsDir)) {
 // 3. Flat icons in root (avoids subfolder 404s on Hostinger)
 const icon192Src = path.join(publicDir, 'icon-192.png');
 const icon512Src = path.join(publicDir, 'icon-512.png');
-const faviconSrc = path.join(publicDir, 'favicon.ico');
+const faviconSrc = path.join(publicDir, 'favicon.png');
 
 if (fs.existsSync(icon192Src)) {
   fs.copyFileSync(icon192Src, path.join(distDir, 'icon-192.png'));
@@ -69,7 +69,7 @@ if (fs.existsSync(icon512Src)) {
 }
 
 if (fs.existsSync(faviconSrc)) {
-  fs.copyFileSync(faviconSrc, path.join(distDir, 'favicon.ico'));
+  fs.copyFileSync(faviconSrc, path.join(distDir, 'favicon.png'));
 }
 
 // 4. Copy APK into dist if available
@@ -85,7 +85,7 @@ if (fs.existsSync(manifestPath)) {
   const manifest = {
     name: "NearBin - Smart Public Waste Heatmap & Reporting",
     short_name: "NearBin",
-    description: "Civic waste reporting and cleanup tracking app with Snapchat-style density heatmap and live camera GPS verification by Earth Relief India.",
+    description: "Civic waste reporting and cleanup tracking app with a live community map and camera GPS verification by Earth Relief India.",
     start_url: "./",
     scope: "./",
     display: "standalone",
@@ -118,11 +118,6 @@ if (fs.existsSync(manifestPath)) {
         type: "image/png",
         purpose: "maskable"
       },
-      {
-        src: "favicon.ico",
-        sizes: "64x64 32x32 24x24 16x16",
-        type: "image/x-icon"
-      }
     ]
   };
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
@@ -134,8 +129,112 @@ const indexPath = path.join(distDir, 'index.html');
 if (fs.existsSync(indexPath)) {
   let html = fs.readFileSync(indexPath, 'utf8');
 
-  // Add PWA tags before </head>
-  const pwaTags = `
+  // Enhanced On-Page & Social SEO + PWA Meta Tags (100% invisible on screen, inside <head>)
+  const seoAndPwaTags = `
+    <!-- On-Page Technical SEO (100% Invisible to User, Full Search Engine Indexing) -->
+    <title>NearBin - Swachh Bharat Live Waste Map & Civic Sanitation Heatmap | Earth Relief India</title>
+    <meta name="description" content="NearBin is India's real-time community waste reporting and sanitation tracking platform by Earth Relief India. Geotag uncleaned dumpsites with GPS camera proof, earn Swachhata Karma points, empower municipal Safai Mitras, and track Swachh Survekshan city rankings." />
+    <meta name="keywords" content="NearBin, Swachh Bharat, waste management India, garbage heatmap, civic reporting app, Mappls GPS map, Safai Mitra, Kabadiwala, plastic recycling, Swachh Survekshan, Earth Relief India, Keshav Singh, Greater Noida waste tracking, clean India mission" />
+    <meta name="author" content="Earth Relief India" />
+    <meta name="copyright" content="Earth Relief India" />
+    <meta name="publisher" content="Earth Relief India" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <link rel="canonical" href="https://nearbin.agriheal.in/" />
+    <link rel="alternate" hreflang="en-IN" href="https://nearbin.agriheal.in/" />
+    <link rel="alternate" hreflang="hi-IN" href="https://nearbin.agriheal.in/" />
+    <link rel="alternate" hreflang="x-default" href="https://nearbin.agriheal.in/" />
+
+    <!-- Geo-Targeting & Localized Civic Metadata -->
+    <meta name="geo.region" content="IN-UP" />
+    <meta name="geo.placename" content="Greater Noida, Uttar Pradesh, India" />
+    <meta name="geo.position" content="28.4744;77.504" />
+    <meta name="ICBM" content="28.4744, 77.504" />
+
+    <!-- Social SEO: Open Graph (WhatsApp, Facebook, LinkedIn, Telegram) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="NearBin" />
+    <meta property="og:title" content="NearBin - Swachh Bharat Live Waste Map & Civic Sanitation Heatmap" />
+    <meta property="og:description" content="Geotag uncleaned garbage dumps, track municipal cleanups in real-time, earn Swachhata Karma points, and inspect official Swachh Survekshan city rankings." />
+    <meta property="og:url" content="https://nearbin.agriheal.in/" />
+    <meta property="og:image" content="https://nearbin.agriheal.in/icon-512.png" />
+    <meta property="og:image:secure_url" content="https://nearbin.agriheal.in/icon-512.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="NearBin Official Eco Brand Emblem" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Social SEO: Twitter / X Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@earth_relief" />
+    <meta name="twitter:creator" content="@earth_relief" />
+    <meta name="twitter:title" content="NearBin - Swachh Bharat Live Waste Map & Civic Sanitation Heatmap" />
+    <meta name="twitter:description" content="Geotag uncleaned garbage dumps, track municipal cleanups in real-time, and earn Swachhata Karma points with Earth Relief India." />
+    <meta name="twitter:image" content="https://nearbin.agriheal.in/icon-512.png" />
+    <meta name="twitter:image:alt" content="NearBin Smart Waste Reporting & Heatmap" />
+
+    <!-- Schema.org JSON-LD Structured Data (100% Invisible to UI, Parsed by Search Engines) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://nearbin.agriheal.in/#webapp",
+          "name": "NearBin",
+          "url": "https://nearbin.agriheal.in/",
+          "description": "Civic waste reporting and cleanup tracking app with live community heatmaps and GPS photo verification.",
+          "applicationCategory": "UtilitiesApplication",
+          "operatingSystem": "All (Web, Android, iOS)",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "INR"
+          },
+          "creator": {
+            "@id": "https://earthrelief.in/#organization"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://earthrelief.in/#organization",
+          "name": "Earth Relief India",
+          "url": "https://earthrelief.in",
+          "logo": "https://nearbin.agriheal.in/icon-512.png",
+          "founder": {
+            "@type": "Person",
+            "name": "Keshav Singh",
+            "jobTitle": "Founder & Managing Director",
+            "sameAs": "https://www.linkedin.com/in/keshav-singh-45814a373/"
+          },
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Near Jogendra Market, Plot NO.08, vill-Bishnulli, Dadri",
+            "addressLocality": "Greater Noida",
+            "addressRegion": "Uttar Pradesh",
+            "postalCode": "203207",
+            "addressCountry": "IN"
+          },
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+91-78388-89588",
+            "contactType": "customer support",
+            "email": "eco@earthrelief.in"
+          },
+          "sameAs": [
+            "https://www.instagram.com/earthrelief.india",
+            "https://x.com/earth_relief",
+            "https://www.linkedin.com/in/earth-relief-8722213b0/",
+            "https://www.facebook.com/earthrelief.india/",
+            "https://github.com/earthreliefindia-lab/NearBin"
+          ]
+        }
+      ]
+    }
+    </script>
+
     <!-- NearBin Progressive Web App (PWA) Meta -->
     <meta name="theme-color" content="#00E676" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -144,18 +243,21 @@ if (fs.existsSync(indexPath)) {
     <meta name="apple-mobile-web-app-title" content="NearBin" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" href="icon-192.png" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
   `;
 
+  // Replace default title if present
+  html = html.replace(/<title>.*?<\/title>/i, '');
+
   if (!html.includes('manifest.json')) {
-    html = html.replace('</head>', `${pwaTags}</head>`);
+    html = html.replace('</head>', `${seoAndPwaTags}</head>`);
   }
 
   // Load from root bundle.js with cache-busting and fallback
   const cacheBuster = Date.now().toString(36);
   const newScriptTag = `<script src="bundle.js?v=${cacheBuster}" onerror="this.onerror=null;this.src='static/js/bundle.js';" defer></script>`;
   html = html.replace(/<script src="[^"]*"[^>]*><\/script>/, newScriptTag);
-  html = html.replace(/href="\/favicon\.ico"/g, 'href="favicon.ico"');
+  html = html.replace(/href="\/favicon\.ico"/g, 'href="icon-192.png"');
 
   // Mobile viewport & tap performance enhancement
   html = html.replace(
@@ -163,22 +265,30 @@ if (fs.existsSync(indexPath)) {
     '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />'
   );
 
-  // Inject Firebase Official SDK for earthrelief.india@gmail.com (nearbin-ba519)
+  // Inject Firebase Official SDK (driven by environment variables, sanitized in source code)
+  const fbApiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'input text';
+  const fbAuthDomain = process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'input text';
+  const fbProjectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'input text';
+  const fbStorageBucket = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'input text';
+  const fbSenderId = process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 'input text';
+  const fbAppId = process.env.EXPO_PUBLIC_FIREBASE_APP_ID || 'input text';
+  const fbMeasurementId = process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || 'input text';
+
   const firebaseScripts = `
-  <!-- Firebase Official SDK (nearbin-ba519) -->
+  <!-- Firebase Official SDK (Configured via Environment) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script>
     window.firebaseConfig = {
-      apiKey: "AIzaSyDQKTD3GpA9zJjF4HRAazxH9tuEJMQz8H0",
-      authDomain: "nearbin-ba519.firebaseapp.com",
-      projectId: "nearbin-ba519",
-      storageBucket: "nearbin-ba519.firebasestorage.app",
-      messagingSenderId: "810348191384",
-      appId: "1:810348191384:web:50d75b6d551cbabfa7baed",
-      measurementId: "G-14S7FNJTC7"
+      apiKey: "${fbApiKey}",
+      authDomain: "${fbAuthDomain}",
+      projectId: "${fbProjectId}",
+      storageBucket: "${fbStorageBucket}",
+      messagingSenderId: "${fbSenderId}",
+      appId: "${fbAppId}",
+      measurementId: "${fbMeasurementId}"
     };
-    if (window.firebase && !window.firebase.apps.length) {
+    if (window.firebase && !window.firebase.apps.length && window.firebaseConfig.apiKey !== 'input text') {
       window.firebase.initializeApp(window.firebaseConfig);
     }
   </script>
@@ -189,7 +299,7 @@ if (fs.existsSync(indexPath)) {
   }
 
   fs.writeFileSync(indexPath, html, 'utf8');
-  console.log(`[PWA Build] Enhanced dist/index.html with Firebase SDK & root bundle.js?v=${cacheBuster}.`);
+  console.log(`[PWA Build] Enhanced dist/index.html with full SEO meta, JSON-LD schemas, and bundle.js?v=${cacheBuster}.`);
 }
 
 

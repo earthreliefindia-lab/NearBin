@@ -11,10 +11,13 @@ import {
   Alert,
   Linking,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Colors, DarkColors, LightColors } from '../theme/colors';
 import WorkerScreen from './WorkerScreen';
 import ScrapPickerScreen from './ScrapPickerScreen';
+import AppLogo from '../components/AppLogo';
+import { getCityCleanlinessData } from '../services/governmentCleanlinessData';
 
 // Earth Relief India Official Information
 const BRAND_INFO = {
@@ -56,9 +59,13 @@ export default function MenuScreen({
   onReplayTutorial,
   onOpenInstall,
   onRequireAuth,
+  onClaimWelcomeBonus,
+  onShareReferral,
+  userLocation,
 }) {
   const [activeSubScreen, setActiveSubScreen] = useState(null); // 'worker' | 'scrap' | 'about' | null
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isClaimingWelcome, setIsClaimingWelcome] = useState(false);
 
   // Edit profile form state
   const [editName, setEditName] = useState(user?.name || 'Keshaw Sharma');
@@ -111,6 +118,28 @@ export default function MenuScreen({
     );
   };
 
+  const handleClaimWelcome = async () => {
+    if (!user || !onClaimWelcomeBonus || isClaimingWelcome) return;
+    setIsClaimingWelcome(true);
+    try {
+      const result = await onClaimWelcomeBonus();
+      Alert.alert('Welcome reward claimed', `500 Karma points are now in your NearBin account. New balance: ${result.karma}.`);
+    } catch (error) {
+      Alert.alert('Could not claim reward', error?.message || 'Please try again in a moment.');
+    } finally {
+      setIsClaimingWelcome(false);
+    }
+  };
+
+  const handleShareReferral = async () => {
+    if (!user || !onShareReferral) return;
+    try {
+      await onShareReferral();
+    } catch (error) {
+      if (error?.name !== 'AbortError') Alert.alert('Sharing unavailable', 'Please try again from your device.');
+    }
+  };
+
   const openLink = async (url) => {
     try {
       const supported = await Linking.canOpenURL(url);
@@ -127,7 +156,7 @@ export default function MenuScreen({
   const displayName = user?.name || 'Citizen';
   const displayPhone = user?.phone || '+91 98765 43210';
   const displayWard = user?.ward || 'Municipal Ward - Geotagged Zone';
-  const displayKarma = user?.karma ?? 300;
+  const displayKarma = user?.karma ?? 0;
   const displayReports = user?.verifiedReports ?? 0;
   const isGoogleUser = Boolean(user?.authProvider?.toLowerCase().includes('google') || user?.email);
   const isAvatarUrl = Boolean(
@@ -135,6 +164,8 @@ export default function MenuScreen({
     (typeof user.avatar === 'string') &&
     (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))
   );
+
+  const cityRanking = getCityCleanlinessData(userLocation, user?.ward);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -158,9 +189,7 @@ export default function MenuScreen({
                   resizeMode="cover"
                 />
               ) : (
-                <Text style={styles.avatarEmoji}>
-                  {user?.avatar && user.avatar.length <= 4 ? user.avatar : '🌱'}
-                </Text>
+                <AppLogo size={58} />
               )}
             </View>
             <View style={styles.profileMeta}>
@@ -223,11 +252,166 @@ export default function MenuScreen({
             </View>
             <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
             <View style={styles.karmaBlock}>
-              <Text style={[styles.karmaNum, { color: theme.high }]}>Top 2%</Text>
-              <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>City Rank</Text>
+              <Text style={[styles.karmaNum, { color: theme.high }]}>#{cityRanking.nationalRank}</Text>
+              <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>{cityRanking.cityName.split(' ')[0]} Rank</Text>
             </View>
           </View>
         </View>
+
+        {/* Government Swachh Survekshan Official Cleanliness Ranking Card */}
+        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>
+          GOVERNMENT CLEANLINESS RANKING (MOHUA)
+        </Text>
+        <View style={[styles.govRankingCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+          <View style={styles.govCardHeader}>
+            <View style={[styles.govIconCircle, { backgroundColor: theme.primaryContainer }]}>
+              <Text style={styles.govIcon}>🏛️</Text>
+            </View>
+            <View style={styles.govTitleCol}>
+              <View style={styles.govBadgeRow}>
+                <View style={[styles.govBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                  <Text style={[styles.govBadgeText, { color: theme.primary }]}>
+                    SWACHH SURVEKSHAN
+                  </Text>
+                </View>
+                {cityRanking.distanceKm != null && (
+                  <Text style={[styles.govDistanceText, { color: theme.textSecondary }]}>
+                    📍 {cityRanking.distanceKm} km away
+                  </Text>
+                )}
+              </View>
+              <Text style={[styles.govCityName, { color: theme.textPrimary }]}>
+                {cityRanking.cityName}
+              </Text>
+              <Text style={[styles.govStateName, { color: theme.textSecondary }]}>
+                {cityRanking.state} · Ministry of Housing & Urban Affairs
+              </Text>
+            </View>
+          </View>
+
+          {/* Ranks Grid */}
+          <View style={[styles.govGrid, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+            <View style={styles.govGridItem}>
+              <Text style={[styles.govGridRank, { color: theme.primary }]}>
+                #{cityRanking.nationalRank}
+              </Text>
+              <Text style={[styles.govGridLabel, { color: theme.textMuted }]}>
+                All-India Rank
+              </Text>
+            </View>
+            <View style={[styles.govGridDivider, { backgroundColor: theme.border }]} />
+            <View style={styles.govGridItem}>
+              <Text style={[styles.govGridRank, { color: theme.secondary }]}>
+                #{cityRanking.stateRank}
+              </Text>
+              <Text style={[styles.govGridLabel, { color: theme.textMuted }]}>
+                {cityRanking.state.split(' ')[0]} Rank
+              </Text>
+            </View>
+            <View style={[styles.govGridDivider, { backgroundColor: theme.border }]} />
+            <View style={styles.govGridItem}>
+              <Text style={[styles.govGridRank, { color: theme.high }]}>
+                {cityRanking.score}
+              </Text>
+              <Text style={[styles.govGridLabel, { color: theme.textMuted }]}>
+                /{cityRanking.maxScore} Score
+              </Text>
+            </View>
+          </View>
+
+          {/* Detailed metrics pill rows */}
+          <View style={styles.govPillsContainer}>
+            <View style={[styles.govPill, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+              <Text style={styles.govPillIcon}>⭐</Text>
+              <Text style={[styles.govPillText, { color: theme.textPrimary }]}>
+                {cityRanking.gfcRating}
+              </Text>
+            </View>
+            <View style={[styles.govPill, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+              <Text style={styles.govPillIcon}>💧</Text>
+              <Text style={[styles.govPillText, { color: theme.textPrimary }]}>
+                {cityRanking.waterStatus}
+              </Text>
+            </View>
+            <View style={[styles.govPill, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+              <Text style={styles.govPillIcon}>♻️</Text>
+              <Text style={[styles.govPillText, { color: theme.textPrimary }]}>
+                Waste Processing: {cityRanking.wasteProcessingRate}
+              </Text>
+            </View>
+            <View style={[styles.govPill, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+              <Text style={styles.govPillIcon}>🚪</Text>
+              <Text style={[styles.govPillText, { color: theme.textPrimary }]}>
+                Door-to-Door: {cityRanking.doorToDoorSegregation}
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.govFooterRow, { borderTopColor: theme.border }]}>
+            <Text style={[styles.govNoteText, { color: theme.textMuted }]}>
+              Live Government of India data matched to your device GPS coordinates and municipal ward.
+            </Text>
+            <TouchableOpacity
+              onPress={() => openLink('https://swachhsurvekshan.gov.in')}
+              style={[styles.govPortalBtn, { borderColor: theme.primary, backgroundColor: theme.primaryContainer }]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.govPortalBtnText, { color: theme.primary }]}>
+                MoHUA Portal ↗
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Secure karma rewards: shown only to an authenticated Google user. */}
+        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>KARMA BOOSTERS</Text>
+        {user ? (
+          <View style={[styles.boosterCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+            {!user.welcomeClaimedAt ? (
+              <TouchableOpacity
+                style={[styles.welcomeReward, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+                onPress={handleClaimWelcome}
+                disabled={isClaimingWelcome}
+                activeOpacity={0.85}
+              >
+                <View style={styles.boosterTextCol}>
+                  <Text style={[styles.boosterTitle, { color: theme.primary }]}>Welcome to NearBin · +500 Karma</Text>
+                  <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Claim your one-time citizen welcome reward.</Text>
+                </View>
+                {isClaimingWelcome ? <ActivityIndicator color={theme.primary} /> : <Text style={[styles.claimText, { color: theme.primary }]}>Claim</Text>}
+              </TouchableOpacity>
+            ) : (
+              <View style={[styles.rewardClaimed, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+                <Text style={[styles.boosterTitle, { color: theme.primary }]}>✓ Welcome reward claimed</Text>
+                <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Your Karma is securely linked to this Google account.</Text>
+              </View>
+            )}
+
+            <TouchableOpacity style={[styles.referralReward, { borderColor: theme.border }]} onPress={handleShareReferral} activeOpacity={0.8}>
+              <View style={styles.boosterTextCol}>
+                <Text style={[styles.boosterTitle, { color: theme.textPrimary }]}>Invite a neighbourhood friend</Text>
+                <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Share your personal NearBin referral link.</Text>
+              </View>
+              <Text style={[styles.claimText, { color: theme.primary }]}>Share ↗</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.adNotice, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+              <Text style={styles.settingEmoji}>🎬</Text>
+              <View style={styles.boosterTextCol}>
+                <Text style={[styles.boosterTitle, { color: theme.textPrimary }]}>More boosters · +100 Karma</Text>
+                <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Rewarded ads will be available in the upcoming Android app build. Web ads do not grant points.</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity style={[styles.settingRowCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]} onPress={onRequireAuth} activeOpacity={0.8}>
+            <View style={styles.settingTextCol}>
+              <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>Sign in to earn Karma</Text>
+              <Text style={[styles.settingSub, { color: theme.textSecondary }]}>Your rewards and referral link are protected by your Google account.</Text>
+            </View>
+            <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 1. Theme Setting: Dark / Light Mode */}
         <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>APPEARANCE</Text>
@@ -400,6 +584,42 @@ export default function MenuScreen({
           </View>
         </View>
 
+        {/* Legal & Compliance Policies */}
+        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>LEGAL & POLICIES</Text>
+        <TouchableOpacity
+          style={[styles.settingRowCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}
+          onPress={() => setActiveSubScreen('privacy')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.settingTextCol}>
+            <View style={styles.settingIconRow}>
+              <Text style={styles.settingEmoji}>🔒</Text>
+              <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>Privacy Policy</Text>
+            </View>
+            <Text style={[styles.settingSub, { color: theme.textSecondary }]}>
+              Google OAuth data disclosures, GPS privacy, deletion rights & limited use
+            </Text>
+          </View>
+          <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.settingRowCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border, marginTop: -4 }]}
+          onPress={() => setActiveSubScreen('terms')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.settingTextCol}>
+            <View style={styles.settingIconRow}>
+              <Text style={styles.settingEmoji}>📜</Text>
+              <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>Terms & Conditions</Text>
+            </View>
+            <Text style={[styles.settingSub, { color: theme.textSecondary }]}>
+              Civic reporting standards, content licensing, safety & liability
+            </Text>
+          </View>
+          <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
+        </TouchableOpacity>
+
         {/* Account & Session Management */}
         <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>ACCOUNT & SESSION</Text>
         {user ? (
@@ -510,7 +730,7 @@ export default function MenuScreen({
             {/* Header Hero */}
             <View style={styles.aboutHero}>
               <View style={[styles.aboutHeroBadge, { backgroundColor: theme.primaryContainer }]}>
-                <Text style={styles.aboutHeroIcon}>🌱</Text>
+                <AppLogo size={60} />
               </View>
               <Text style={[styles.aboutTitle, { color: theme.textPrimary }]}>Earth Relief India</Text>
               <Text style={[styles.aboutTagline, { color: theme.primary }]}>
@@ -666,6 +886,151 @@ export default function MenuScreen({
           <ScrapPickerScreen hotspots={hotspots} onClaimRecyclables={onClaimRecyclables} />
         </View>
       </Modal>
+
+      {/* Sub-Screen Modal: Privacy Policy */}
+      <Modal visible={activeSubScreen === 'privacy'} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
+          <View style={[styles.subModalHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+            <TouchableOpacity onPress={() => setActiveSubScreen(null)} style={styles.backBtn}>
+              <Text style={[styles.backBtnText, { color: theme.textPrimary }]}>← Back to Menu</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => openLink('https://nearbin.agriheal.in/privacy.html')}
+              style={[styles.webLinkPill, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+            >
+              <Text style={[styles.webLinkPillText, { color: theme.primary }]}>Open Web Page ↗</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.legalScroll}>
+            <View style={styles.legalHero}>
+              <View style={[styles.legalHeroBadge, { backgroundColor: theme.primaryContainer }]}>
+                <Text style={{ fontSize: 26 }}>🔒</Text>
+              </View>
+              <Text style={[styles.legalTitle, { color: theme.textPrimary }]}>Privacy Policy</Text>
+              <Text style={[styles.legalMeta, { color: theme.textMuted }]}>
+                Effective: Sept 7, 2026 • Earth Relief India
+              </Text>
+            </View>
+
+            {/* Google OAuth & Limited Use Card */}
+            <View style={[styles.legalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.legalSectionHeading, { color: theme.primary }]}>1. Google User Data & Limited Use</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary }]}>
+                When you sign in with Google, NearBin receives your name, email address, profile picture avatar, and Google account identifier to authenticate your civic profile and protect against false reports.
+              </Text>
+              <View style={[styles.legalCallout, { backgroundColor: 'rgba(41, 121, 255, 0.1)', borderColor: 'rgba(41, 121, 255, 0.3)' }]}>
+                <Text style={[styles.legalCalloutTitle, { color: '#60A5FA' }]}>Google Limited Use Compliance</Text>
+                <Text style={[styles.legalCalloutText, { color: theme.textPrimary }]}>
+                  NearBin's use and transfer to any other app of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.
+                </Text>
+              </View>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>• We NEVER sell or monetize your Google account data.</Text>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>• We do NOT request or access sensitive Google Drive, Gmail, or Contact files.</Text>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>• Data is used strictly for identity verification and citizen Karma score security.</Text>
+            </View>
+
+            {/* GPS & Camera Card */}
+            <View style={[styles.legalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.legalSectionHeading, { color: theme.primary }]}>2. Location (GPS) & Camera Permissions</Text>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>
+                • <Text style={{ fontWeight: '700', color: theme.textPrimary }}>GPS Coordinates:</Text> Captured with your explicit permission when logging a waste spot or opening the community heatmap to display accurate pins and guide Safai Mitras / kabadiwalas.
+              </Text>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>
+                • <Text style={{ fontWeight: '700', color: theme.textPrimary }}>Camera Access:</Text> Used solely to take real-time photos of public garbage piles or verify completed cleanups. Unrelated gallery photos are never accessed.
+              </Text>
+            </View>
+
+            {/* Deletion & Retention */}
+            <View style={[styles.legalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.legalSectionHeading, { color: theme.primary }]}>3. Data Retention & Account Deletion</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary }]}>
+                You have the full right to delete your account and personal data at any time. Email eco@earthrelief.in or earthrelief.india@gmail.com with the subject line "Account Deletion Request". We process all verified requests within 30 days.
+              </Text>
+            </View>
+
+            {/* Contact Box */}
+            <View style={[styles.legalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.legalSectionHeading, { color: theme.primary }]}>4. Grievance & Organization Contact</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textPrimary, fontWeight: '700' }]}>Earth Relief India (NearBin Civic Platform)</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary }]}>Founder & Managing Director: Keshav Singh</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary }]}>Plot NO.08, Vill-Bishnulli, Dadri, Greater Noida, UP 203207</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary }]}>Helpline: +91 78388 89588 • Email: eco@earthrelief.in</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => openLink('https://nearbin.agriheal.in/privacy.html')}
+              style={[styles.openWebBtn, { backgroundColor: theme.primary }]}
+            >
+              <Text style={[styles.openWebBtnText, { color: theme.textInverse }]}>View Full Privacy Policy on Web ➔</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Sub-Screen Modal: Terms & Conditions */}
+      <Modal visible={activeSubScreen === 'terms'} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: theme.background }}>
+          <View style={[styles.subModalHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+            <TouchableOpacity onPress={() => setActiveSubScreen(null)} style={styles.backBtn}>
+              <Text style={[styles.backBtnText, { color: theme.textPrimary }]}>← Back to Menu</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => openLink('https://nearbin.agriheal.in/terms.html')}
+              style={[styles.webLinkPill, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+            >
+              <Text style={[styles.webLinkPillText, { color: theme.primary }]}>Open Web Page ↗</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.legalScroll}>
+            <View style={styles.legalHero}>
+              <View style={[styles.legalHeroBadge, { backgroundColor: theme.primaryContainer }]}>
+                <Text style={{ fontSize: 26 }}>📜</Text>
+              </View>
+              <Text style={[styles.legalTitle, { color: theme.textPrimary }]}>Terms & Conditions</Text>
+              <Text style={[styles.legalMeta, { color: theme.textMuted }]}>
+                Effective: Sept 7, 2026 • Earth Relief India
+              </Text>
+            </View>
+
+            <View style={[styles.legalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.legalSectionHeading, { color: theme.primary }]}>1. Acceptance of Terms</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary }]}>
+                By accessing or using NearBin, you agree to be bound by these terms established by Earth Relief India, founded by Keshav Singh. NearBin is an open civic tool supporting Swachh Bharat and local community sanitation.
+              </Text>
+            </View>
+
+            <View style={[styles.legalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.legalSectionHeading, { color: theme.primary }]}>2. Civic Reporting Integrity</Text>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>• Reports must reflect genuine public garbage hotspots.</Text>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>• Fabricating reports, uploading non-waste media, or gaming Karma points results in permanent account termination.</Text>
+              <Text style={[styles.legalBulletItem, { color: theme.textSecondary }]}>• Users retain copyright in their photos and grant Earth Relief India a non-exclusive license to publish reports for municipal cleanup routing.</Text>
+            </View>
+
+            <View style={[styles.legalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.legalSectionHeading, { color: theme.primary }]}>3. Safety & Limitation of Liability</Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary }]}>
+                Never enter private property or touch dangerous biohazard or industrial waste. NearBin coordinates civic awareness; actual cleanup response times depend on municipal corporations and urban local bodies.
+              </Text>
+              <Text style={[styles.legalBodyText, { color: theme.textSecondary, marginTop: 6 }]}>
+                Jurisdiction: Gautam Buddha Nagar, Uttar Pradesh, India.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => openLink('https://nearbin.agriheal.in/terms.html')}
+              style={[styles.openWebBtn, { backgroundColor: theme.primary }]}
+            >
+              <Text style={[styles.openWebBtnText, { color: theme.textInverse }]}>View Full Terms on Web ➔</Text>
+            </TouchableOpacity>
+
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -793,6 +1158,56 @@ const styles = StyleSheet.create({
   },
   karmaDivider: {
     width: 1,
+  },
+  boosterCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 12,
+    gap: 10,
+  },
+  welcomeReward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    gap: 12,
+  },
+  rewardClaimed: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+  },
+  referralReward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    paddingTop: 12,
+    gap: 12,
+  },
+  adNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    gap: 10,
+  },
+  boosterTextCol: {
+    flex: 1,
+  },
+  boosterTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  boosterSub: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 3,
+  },
+  claimText: {
+    fontSize: 12,
+    fontWeight: '900',
   },
   sectionHeading: {
     fontSize: 11,
@@ -1221,4 +1636,213 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  webLinkPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  webLinkPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  legalScroll: {
+    padding: 18,
+    gap: 14,
+  },
+  legalHero: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  legalHeroBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  legalTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  legalMeta: {
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  legalCard: {
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    gap: 10,
+  },
+  legalSectionHeading: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  legalBodyText: {
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  legalBulletItem: {
+    fontSize: 13,
+    lineHeight: 19,
+    paddingLeft: 4,
+  },
+  legalCallout: {
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    gap: 6,
+    marginVertical: 4,
+  },
+  legalCalloutTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  legalCalloutText: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  openWebBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 8,
+    marginTop: 6,
+  },
+  openWebBtnText: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  govRankingCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+    gap: 14,
+  },
+  govCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  govIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  govIcon: {
+    fontSize: 24,
+  },
+  govTitleCol: {
+    flex: 1,
+  },
+  govBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  govBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  govBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  govDistanceText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  govCityName: {
+    fontSize: 17,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  govStateName: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  govGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 12,
+  },
+  govGridItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  govGridRank: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  govGridLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  govGridDivider: {
+    width: 1,
+    height: 28,
+  },
+  govPillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  govPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  govPillIcon: {
+    fontSize: 12,
+  },
+  govPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  govFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    gap: 12,
+  },
+  govNoteText: {
+    flex: 1,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  govPortalBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  govPortalBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
 });
+

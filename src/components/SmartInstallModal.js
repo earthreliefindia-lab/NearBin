@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, Linking } from 'react-native';
 import { Colors } from '../theme/colors';
+import AppLogo from './AppLogo';
 
 export default function SmartInstallModal({ isDark = true, forceVisible = false, onClose }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -102,7 +103,7 @@ export default function SmartInstallModal({ isDark = true, forceVisible = false,
           {/* Header */}
           <View style={styles.headerRow}>
             <View style={styles.brandBadge}>
-              <Text style={styles.brandIcon}>🌱</Text>
+              <AppLogo size={48} />
               <View>
                 <Text style={[styles.brandTitle, isDark ? styles.textWhite : styles.textDark]}>
                   NearBin Lite App

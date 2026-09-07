@@ -169,20 +169,20 @@ EXPO_PUBLIC_API_URL=
 # Mappls API Key (Leave empty to use default OpenStreetMap/Carto tiles)
 EXPO_PUBLIC_MAPPLS_API_KEY=
 
-# Official Firebase Project: nearbin-ba519 (earthrelief.india@gmail.com)
-EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSyDQKTD3GpA9zJjF4HRAazxH9tuEJMQz8H0
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=nearbin-ba519.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=nearbin-ba519
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=nearbin-ba519.firebasestorage.app
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=810348191384
-EXPO_PUBLIC_FIREBASE_APP_ID=1:810348191384:web:50d75b6d551cbabfa7baed
+# Official Firebase Project Configuration
+EXPO_PUBLIC_FIREBASE_API_KEY=input text
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=input text
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=input text
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=input text
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=input text
+EXPO_PUBLIC_FIREBASE_APP_ID=input text
 
 # Cloudinary Image CDN Configuration
-EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=earthrelief
-EXPO_PUBLIC_CLOUDINARY_PRESET=nearbin_waste
+EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME=input text
+EXPO_PUBLIC_CLOUDINARY_PRESET=input text
 ```
 
-> **Firebase Authorized Domains**: In Firebase Console for `nearbin-ba519` (Authentication ➔ Settings ➔ Authorized domains), ensure `nearbin.agriheal.in` and `agriheal.in` are listed.
+> **Firebase Authorized Domains**: In Firebase Console (Authentication ➔ Settings ➔ Authorized domains), ensure `nearbin.agriheal.in` and `agriheal.in` are listed.
 
 ---
 

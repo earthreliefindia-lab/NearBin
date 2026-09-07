@@ -1,7 +1,39 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert, ScrollView } from 'react-native';
 import { Colors, DarkColors, LightColors, CategoryMeta } from '../theme/colors';
 import HotspotDetailCard from '../components/HotspotDetailCard';
+import AppLogo from '../components/AppLogo';
+import { shareReport } from '../services/reportShare';
+
+// Haversine distance calculator in meters
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+}
+
+function formatDistance(meters) {
+  if (meters == null) return 'Nearby';
+  if (meters < 1000) return `${meters}m away`;
+  return `${(meters / 1000).toFixed(1)} km away`;
+}
+
+// 4-tier radius options + All
+const RADIUS_OPTIONS = [
+  { id: 'all', label: 'All Distance', radius: Infinity, icon: '🇮🇳' },
+  { id: '500m', label: '500m Circle', radius: 500, icon: '🚶' },
+  { id: '1km', label: '1 km Circle', radius: 1000, icon: '🏘️' },
+  { id: '5km', label: '5 km Circle', radius: 5000, icon: '🏙️' },
+  { id: '10km', label: '10 km Circle', radius: 10000, icon: '🌐' },
+];
 
 export default function FeedScreen({
   hotspots,
@@ -10,10 +42,31 @@ export default function FeedScreen({
   onClaimRecyclables,
   currentRole,
   isDark = true,
+  userLocation,
   onOpenReport,
 }) {
   const [selectedHotspot, setSelectedHotspot] = useState(null);
+  const [selectedRadius, setSelectedRadius] = useState('all'); // 'all' | '500m' | '1km' | '5km' | '10km'
   const theme = isDark ? DarkColors : LightColors;
+
+  const uLat = userLocation?.latitude || 28.5672;
+  const uLng = userLocation?.longitude || 77.2435;
+
+  // Enrich hotspots with real GPS distance from user
+  const enrichedHotspots = (hotspots || []).map((h) => {
+    const d = getDistanceMeters(uLat, uLng, parseFloat(h.latitude), parseFloat(h.longitude));
+    return { ...h, distanceMeters: d };
+  });
+
+  const selectedOption = RADIUS_OPTIONS.find((r) => r.id === selectedRadius) || RADIUS_OPTIONS[0];
+
+  // Filter and sort by proximity
+  const filteredHotspots = enrichedHotspots
+    .filter((h) => {
+      if (selectedOption.radius === Infinity) return true;
+      return (h.distanceMeters ?? Infinity) <= selectedOption.radius;
+    })
+    .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
 
   const renderItem = ({ item }) => {
     const cat = CategoryMeta[item.category] || CategoryMeta.plastic;
@@ -64,9 +117,18 @@ export default function FeedScreen({
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]} numberOfLines={2}>
             {item.title}
           </Text>
-          <Text style={[styles.cardAddress, { color: theme.textMuted }]} numberOfLines={1}>
-            📍 {item.address}
-          </Text>
+          <View style={styles.addressRow}>
+            <Text style={[styles.cardAddress, { color: theme.textMuted, flex: 1 }]} numberOfLines={1}>
+              📍 {item.address}
+            </Text>
+            {item.distanceMeters != null && (
+              <View style={[styles.distBadge, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+                <Text style={[styles.distBadgeText, { color: theme.primary }]}>
+                  {formatDistance(item.distanceMeters)}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Card Footer */}
           <View style={styles.cardFooter}>
@@ -75,17 +137,29 @@ export default function FeedScreen({
               <Text style={[styles.upvoteText, { color: theme.textSecondary }]}>{item.upvotes} reports</Text>
             </View>
 
-            {!isCleaned && (
+            <View style={styles.cardActions}>
               <TouchableOpacity
-                style={[
-                  styles.inlineUpvoteBtn,
-                  { backgroundColor: theme.surfaceVariant, borderColor: theme.border },
-                ]}
-                onPress={() => onUpvote(item.id)}
+                style={[styles.shareBtn, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+                onPress={async () => {
+                  try {
+                    const result = await shareReport(item);
+                    if (result.copied) Alert.alert('Link copied', 'Your report link is ready to share.');
+                  } catch (error) {
+                    if (error?.name !== 'AbortError') Alert.alert('Share unavailable', 'Please try again from your phone browser.');
+                  }
+                }}
               >
-                <Text style={[styles.inlineUpvoteText, { color: theme.primary }]}>👍 Confirm (+1)</Text>
+                <Text style={[styles.inlineUpvoteText, { color: theme.primary }]}>↗ Share</Text>
               </TouchableOpacity>
-            )}
+              {!isCleaned && (
+                <TouchableOpacity
+                  style={[styles.inlineUpvoteBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+                  onPress={() => onUpvote(item.id)}
+                >
+                  <Text style={[styles.inlineUpvoteText, { color: theme.primary }]}>👍 Confirm</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -101,9 +175,57 @@ export default function FeedScreen({
         </Text>
       </View>
 
-      {hotspots && hotspots.length > 0 ? (
+      {/* 4-Tier Radius Filter Bar */}
+      <View style={[styles.filterBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <View style={styles.filterHeaderRow}>
+          <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>
+            Radius Circle:
+          </Text>
+          <Text style={[styles.filterCountBadge, { color: theme.primary }]}>
+            {filteredHotspots.length} spots in {selectedOption.label}
+          </Text>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
+          {RADIUS_OPTIONS.map((opt) => {
+            const isSelected = selectedRadius === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                onPress={() => setSelectedRadius(opt.id)}
+                style={[
+                  styles.radiusChip,
+                  {
+                    backgroundColor: isSelected ? theme.primary : theme.surfaceVariant,
+                    borderColor: isSelected ? theme.primary : theme.border,
+                  },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.radiusChipIcon}>{opt.icon}</Text>
+                <Text
+                  style={[
+                    styles.radiusChipText,
+                    {
+                      color: isSelected ? theme.textInverse : theme.textPrimary,
+                      fontWeight: isSelected ? '800' : '600',
+                    },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {filteredHotspots && filteredHotspots.length > 0 ? (
         <FlatList
-          data={hotspots}
+          data={filteredHotspots}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
@@ -113,14 +235,26 @@ export default function FeedScreen({
         <View style={styles.emptyContainer}>
           <View style={[styles.emptyCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
             <View style={[styles.emptyIconCircle, { backgroundColor: theme.primaryContainer }]}>
-              <Text style={styles.emptyIcon}>🌱</Text>
+              <AppLogo size={42} />
             </View>
             <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
-              100% Clean Neighborhood!
+              {hotspots && hotspots.length > 0 ? 'No Spots in this Radius' : '100% Clean Neighborhood!'}
             </Text>
             <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
-              No active garbage dumps reported in your area yet. As soon as you or a neighbor spots and geotags an uncleaned spot, it will appear here in real-time.
+              {hotspots && hotspots.length > 0
+                ? `No active waste reports found within ${selectedOption.label}. Try selecting 5km, 10km, or All Distance to view community reports.`
+                : 'No active garbage dumps reported in your area yet. As soon as you or a neighbor spots and geotags an uncleaned spot, it will appear here in real-time.'}
             </Text>
+            {hotspots && hotspots.length > 0 && (
+              <TouchableOpacity
+                style={[styles.resetRadiusBtn, { backgroundColor: theme.primary }]}
+                onPress={() => setSelectedRadius('all')}
+              >
+                <Text style={[styles.resetRadiusText, { color: theme.textInverse }]}>
+                  🌐 View All Distance Reports ({hotspots.length})
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Quick Guidance Card */}
             <View style={[styles.guidanceBox, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
@@ -244,6 +378,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 4,
   },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   upvoteCounter: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -257,6 +396,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   inlineUpvoteBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  shareBtn: {
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 12,
@@ -347,6 +492,74 @@ const styles = StyleSheet.create({
   reportPromptText: {
     fontSize: 14,
     fontWeight: '900',
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 6,
+  },
+  distBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  distBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  filterBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
+  filterHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  filterLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  filterCountBadge: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  filterScroll: {
+    gap: 8,
+    paddingRight: 16,
+  },
+  radiusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  radiusChipIcon: {
+    fontSize: 13,
+  },
+  radiusChipText: {
+    fontSize: 12,
+  },
+  resetRadiusBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  resetRadiusText: {
+    fontSize: 12,
+    fontWeight: '800',
   },
 });
 

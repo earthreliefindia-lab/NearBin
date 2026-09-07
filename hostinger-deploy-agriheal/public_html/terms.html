@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms & Conditions | NearBin &mdash; Earth Relief India</title>
+
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description" content="NearBin Terms & Conditions. Read the terms of service governing the use of NearBin civic waste reporting platform, community heatmap, and civic karma rewards." />
+  <meta name="keywords" content="NearBin Terms and Conditions, NearBin Terms of Service, Earth Relief India, Keshav Singh, Swachh Bharat civic app terms" />
+  <meta property="og:title" content="NearBin Terms & Conditions | Earth Relief India" />
+  <meta property="og:description" content="Terms of Service and Civic Usage Guidelines for NearBin by Earth Relief India." />
+  <meta property="og:url" content="https://nearbin.agriheal.in/terms.html" />
+  <meta name="theme-color" content="#00E676" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="icon-192.png" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --primary: #00E676;
+      --primary-dark: #00B359;
+      --primary-glow: rgba(0, 230, 118, 0.22);
+      --bg: #0B0F12;
+      --surface: #141B20;
+      --surface-elevated: #1D262D;
+      --border: #2A3640;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent-urgent: #FF5252;
+      --accent-warning: #FFAB00;
+      --accent-blue: #2979FF;
+      --accent-badge: rgba(0, 230, 118, 0.12);
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Glow */
+    .ambient-glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, rgba(11, 15, 18, 0) 70%);
+      top: -150px;
+      right: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header / Nav */
+    header {
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(14px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 15, 18, 0.88);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #00E676, #00B359);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+
+    .brand-text h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text span {
+      font-size: 11px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .nav-btn {
+      background: var(--surface-elevated);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Terms Content */
+    .terms-hero {
+      padding: 48px 0 32px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      background: var(--accent-badge);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .terms-hero h2 {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      color: #FFFFFF;
+    }
+
+    .terms-meta {
+      font-size: 14px;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .terms-meta strong {
+      color: var(--text);
+    }
+
+    .terms-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    .terms-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .terms-card p {
+      font-size: 15px;
+      color: #CBD5E1;
+      margin-bottom: 14px;
+    }
+
+    .terms-card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .terms-card ul {
+      margin: 12px 0 16px 24px;
+      color: #CBD5E1;
+      font-size: 15px;
+    }
+
+    .terms-card li {
+      margin-bottom: 8px;
+    }
+
+    .callout-warning {
+      background: rgba(255, 171, 0, 0.08);
+      border-left: 4px solid var(--accent-warning);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 18px 0;
+      color: #E2E8F0;
+    }
+
+    .callout-warning strong {
+      color: #FCD34D;
+    }
+
+    .callout-green {
+      background: rgba(0, 230, 118, 0.08);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin: 18px 0;
+      color: #E2E8F0;
+    }
+
+    .contact-box {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin-top: 14px;
+    }
+
+    .contact-box a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .contact-box a:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      margin-top: 48px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      margin: 0 8px;
+    }
+
+    footer a:hover {
+      color: var(--primary);
+    }
+
+    @media (max-width: 640px) {
+      .terms-hero h2 {
+        font-size: 28px;
+      }
+      .terms-card {
+        padding: 20px;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-inner">
+      <a href="./" class="brand">
+        <div class="brand-logo">🌱</div>
+        <div class="brand-text">
+          <h1>NearBin</h1>
+          <span>Earth Relief India</span>
+        </div>
+      </a>
+
+      <nav class="nav-links">
+        <a href="./">Home</a>
+        <a href="terms.html" style="color: var(--primary);">Terms & Conditions</a>
+        <a href="privacy.html">Privacy Policy</a>
+      </nav>
+
+      <a href="./" class="nav-btn">← Back to App</a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <div class="terms-hero">
+      <div class="badge">⚖️ User Agreement</div>
+      <h2>Terms & Conditions</h2>
+      <div class="policy-meta">
+        <div>Effective Date: <strong>September 7, 2026</strong></div>
+        <div>Last Updated: <strong>September 7, 2026</strong></div>
+        <div>Entity: <strong>Earth Relief India</strong></div>
+      </div>
+    </div>
+
+    <!-- Section 1: Agreement to Terms -->
+    <section class="terms-card">
+      <h3>1. Agreement to Terms</h3>
+      <p>
+        These Terms & Conditions constitute a legally binding agreement made between you, whether personally or on behalf of an entity ("User" or "you"), and <strong>Earth Relief India</strong> ("we", "us", or "our"), founded and managed by <strong>Keshav Singh</strong>, concerning your access to and use of the <strong>NearBin</strong> application, web portal, Progressive Web App (PWA), and associated services.
+      </p>
+      <p>
+        By creating an account, accessing, or using NearBin, you confirm that you have read, understood, and agreed to be bound by all of these Terms & Conditions. If you do not agree with all of these terms, you are expressly prohibited from using NearBin and must discontinue use immediately.
+      </p>
+    </section>
+
+    <!-- Section 2: Platform Purpose & Civic Scope -->
+    <section class="terms-card">
+      <h3>2. Purpose & Civic Mission of NearBin</h3>
+      <p>
+        NearBin is an open civic technology and environmental intelligence tool developed to support clean neighborhood initiatives, the Swachh Bharat mission, and circular zero-waste economies.
+      </p>
+      <p>NearBin enables citizens to:</p>
+      <ul>
+        <li>Photograph and geo-tag public garbage dumps, overflow bins, and litter hotspots in real time.</li>
+        <li>View live community heatmaps of public sanitation conditions.</li>
+        <li>Coordinate with municipal sanitation workers (Safai Mitras) and scrap recyclers (Kabadiwalas) to facilitate rapid cleanup and recycling of paper, plastic, and metal waste.</li>
+        <li>Earn citizen Swachhata Karma points, civic leaderboard recognition, and community badges.</li>
+      </ul>
+    </section>
+
+    <!-- Section 3: User Accounts & Authentication -->
+    <section class="terms-card">
+      <h3>3. User Accounts & Google Authentication</h3>
+      <p>
+        To submit waste hotspot reports, track cleanups, and accumulate Swachhata Karma points, you must sign in via your Google Account or verified phone credentials.
+      </p>
+      <ul>
+        <li>You agree to provide true, accurate, and current information when registering or modifying your civic profile.</li>
+        <li>You are responsible for maintaining the confidentiality of your credentials and for all activities that occur under your account.</li>
+        <li>NearBin uses Google OAuth for secure, passwordless authentication. We never ask for or store your Google password.</li>
+        <li>You agree to notify us immediately at <a href="mailto:eco@earthrelief.in" style="color: var(--primary);">eco@earthrelief.in</a> if you suspect any unauthorized access to your account.</li>
+      </ul>
+    </section>
+
+    <!-- Section 4: Acceptable Use & Reporting Integrity -->
+    <section class="terms-card">
+      <h3>4. Civic Reporting Standards & Prohibited Conduct</h3>
+      <p>
+        The integrity of NearBin relies upon honest community participation. As a condition of your use of NearBin, you warrant and agree that you will <strong>NOT</strong>:
+      </p>
+      <ul>
+        <li>Submit false, staged, fabricated, or duplicate reports of garbage or litter.</li>
+        <li>Upload images that depict private individuals without their consent, lewd or obscene material, harassment, hate speech, or content unrelated to civic waste.</li>
+        <li>Mark clean sites as contaminated, or falsely certify contaminated sites as cleaned.</li>
+        <li>Trespass onto private property, restricted government compounds, or hazardous zones to photograph garbage.</li>
+        <li>Engage in automated scraping, reverse engineering, rate-limit bypassing, or denial-of-service attacks against NearBin APIs or database servers.</li>
+        <li>Impersonate any government municipal officer, sanitation supervisor, Safai Mitra, or another citizen.</li>
+      </ul>
+
+      <div class="callout-warning">
+        <strong>Zero-Tolerance Abuse Policy:</strong><br />
+        Accounts found submitting fraudulent reports, abusing the Karma points mechanism, or uploading malicious media will be permanently banned and submitted entries removed from the public civic map.
+      </div>
+    </section>
+
+    <!-- Section 5: User-Generated Content & Licensing -->
+    <section class="terms-card">
+      <h3>5. User-Generated Civic Content License</h3>
+      <p>
+        When you submit photos, geographic coordinates, notes, or cleanup proof to NearBin, you retain copyright in your photographs. However, by uploading content to NearBin, you grant <strong>Earth Relief India</strong> a perpetual, worldwide, irrevocable, royalty-free, non-exclusive license to:
+      </p>
+      <ul>
+        <li>Display, host, and render your waste report and images publicly on the NearBin community heatmap and civic feeds.</li>
+        <li>Transmit coordinates, photos, and timestamps to municipal sanitation departments, urban local bodies (ULBs), and verified recyclers for cleanup execution.</li>
+        <li>Aggregate environmental reporting data for public civic research, pollution heatmaps, and open-source civic technology reporting.</li>
+      </ul>
+    </section>
+
+    <!-- Section 6: Swachhata Karma Rewards System -->
+    <section class="terms-card">
+      <h3>6. Swachhata Karma & Civic Gamification</h3>
+      <p>
+        Swachhata Karma points, achievement tiers, and referral bonuses are virtual civic engagement tokens designed solely to encourage community cleanup participation and recognize active citizens.
+      </p>
+      <ul>
+        <li>Karma points hold <strong>no monetary or cash surrender value</strong>.</li>
+        <li>Points cannot be transferred between accounts, sold, or redeemed for cash unless expressly provided under an official, announced Earth Relief India sponsorship program.</li>
+        <li>Earth Relief India reserves the right to audit, adjust, or revoke Karma points resulting from erroneous, duplicate, or fraudulent report verifications.</li>
+      </ul>
+    </section>
+
+    <!-- Section 7: Safety & Hazardous Waste Disclaimer -->
+    <section class="terms-card">
+      <h3>7. Personal Safety & Hazardous Waste Notice</h3>
+      <div class="callout-warning">
+        <strong>Safety First:</strong><br />
+        Citizens should only photograph garbage dumps from safe public sidewalks, roadsides, or designated community spots. Never touch or handle unidentified chemicals, medical/biohazard waste, live electric wires, or sharp industrial scraps. Always prioritize personal safety over reporting.
+      </div>
+    </section>
+
+    <!-- Section 8: Disclaimer of Warranties & Municipal Liability -->
+    <section class="terms-card">
+      <h3>8. Disclaimers & Municipal Action</h3>
+      <p>
+        NearBin is provided on an <strong>"AS-IS"</strong> and <strong>"AS-AVAILABLE"</strong> basis. Earth Relief India is an independent civic innovation initiative and is not the municipal government or local municipal corporation.
+      </p>
+      <ul>
+        <li>While NearBin routes verified hotspot reports to municipal sanitation departments and local squads, <strong>we do not guarantee the specific timeline or execution of trash clearance</strong> by municipal agencies.</li>
+        <li>Earth Relief India shall not be liable for any indirect, incidental, special, or consequential damages resulting from your use of the platform, community map inaccuracies, or temporary service interruptions.</li>
+      </ul>
+    </section>
+
+    <!-- Section 9: Intellectual Property Rights -->
+    <section class="terms-card">
+      <h3>9. Intellectual Property</h3>
+      <p>
+        The NearBin brand, software, logos, visual design, custom icons, algorithms, and documentation are the proprietary intellectual property of <strong>Earth Relief India</strong> and its founder, Keshav Singh, protected by applicable copyright, trademark, and intellectual property laws.
+      </p>
+    </section>
+
+    <!-- Section 10: Governing Law & Jurisdiction -->
+    <section class="terms-card">
+      <h3>10. Governing Law & Dispute Resolution</h3>
+      <p>
+        These Terms & Conditions shall be governed by and construed in accordance with the laws of the Republic of India. Any legal disputes arising out of or related to NearBin shall be subject to the exclusive jurisdiction of the competent courts located in <strong>Gautam Buddha Nagar (Greater Noida / Noida), Uttar Pradesh, India</strong>.
+      </p>
+    </section>
+
+    <!-- Section 11: Contact & Notice -->
+    <section class="terms-card">
+      <h3>11. Contact & Inquiries</h3>
+      <p>
+        For inquiries regarding these Terms & Conditions, please contact us:
+      </p>
+
+      <div class="contact-box">
+        <p><strong>Earth Relief India</strong> (NearBin Operations)</p>
+        <p><strong>Founder & Managing Director:</strong> Keshav Singh</p>
+        <p><strong>Office Address:</strong> Near Jogendra Market, Plot NO.08, Vill-Bishnulli, Dadri, Greater Noida, Uttar Pradesh 203207, India</p>
+        <p><strong>Helpline / WhatsApp:</strong> <a href="https://wa.me/917838889588" target="_blank">+91 78388 89588</a></p>
+        <p><strong>Email:</strong> <a href="mailto:eco@earthrelief.in">eco@earthrelief.in</a> &bull; <a href="mailto:earthrelief.india@gmail.com">earthrelief.india@gmail.com</a></p>
+        <p><strong>Website:</strong> <a href="https://earthrelief.in" target="_blank">earthrelief.in</a></p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p style="margin-bottom: 8px;">
+        &copy; 2026 <strong>Earth Relief India</strong>. NearBin &trade; is an open civic initiative. All Rights Reserved.
+      </p>
+      <p>
+        <a href="./">Home</a> &bull;
+        <a href="terms.html" style="color: var(--primary);">Terms & Conditions</a> &bull;
+        <a href="privacy.html">Privacy Policy</a> &bull;
+        <a href="https://earthrelief.in" target="_blank">Earth Relief India</a>
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -7,13 +7,14 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "build:web": "expo export -p web && node scripts/prepare-pwa.js",
-    "package:deploy": "npm run build:web && python scripts/package-hostinger.py",
+    "package:deploy": "npm run build:web && node scripts/package-hostinger.js",
     "server": "node server/index.js",
     "dev": "concurrently \"node server/index.js\" \"expo start --web\""
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@supabase/supabase-js": "^2.115.0",
     "cors": "^2.8.5",
     "expo": "^57.0.20",
     "expo-camera": "~57.0.4",

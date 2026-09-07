@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkColors, LightColors } from '../theme/colors';
-import { FirebaseAuthService, isFirebaseConfigured } from '../services/firebaseAuth';
+import { FirebaseAuthService } from '../services/firebaseAuth';
+import AppLogo from './AppLogo';
 
 export default function AuthModal({ visible, onLoginSuccess, isDark = true, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +72,7 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true, onCl
               {/* Top Brand Header */}
               <View style={styles.brandContainer}>
                 <View style={[styles.logoBadge, { backgroundColor: theme.primaryContainer }]}>
-                  <Text style={styles.logoIcon}>🌱</Text>
+                  <AppLogo size={48} />
                 </View>
                 <Text style={[styles.appName, { color: theme.textPrimary }]}>
                   Near<Text style={{ color: theme.primary }}>Bin</Text>
@@ -368,4 +369,3 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
-

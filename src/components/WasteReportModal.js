@@ -94,6 +94,10 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
       });
 
       const primaryCat = selectedCategories[0] || 'plastic';
+      const charCount = (description || '').trim().length;
+      const notesBonus = Math.round(charCount * 0.5);
+      const totalKarmaEarned = 50 + notesBonus;
+
       await onSubmit({
         title: title || `${primaryCat.toUpperCase()} Waste Reported`,
         description: description || 'Spotted by citizen via live camera capture.',
@@ -103,6 +107,8 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
         longitude: userLocation?.longitude || 77.2435,
         address: 'Current Street Location (Mappls GPS verified)',
         beforePhoto: cloudPhotoUrl || photoUri,
+        notesKarma: totalKarmaEarned,
+        characterCount: charCount,
       });
 
       // Reset
@@ -236,8 +242,15 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
               onChangeText={setTitle}
             />
 
-            {/* Description */}
-            <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>DETAILS / NOTES</Text>
+            {/* Description with Character-Based Karma Reward Preview */}
+            <View style={styles.karmaHeaderRow}>
+              <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>DETAILS / NOTES</Text>
+              <View style={[styles.karmaCounterBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                <Text style={[styles.karmaCounterText, { color: theme.primary }]}>
+                  ⭐ +{50 + Math.round((description || '').trim().length * 0.5)} Karma ({description.trim().length} chars)
+                </Text>
+              </View>
+            </View>
             <TextInput
               style={[styles.input, styles.textArea, { backgroundColor: theme.surfaceVariant, borderColor: theme.border, color: theme.textPrimary }]}
               placeholder="Describe heap size, foul smell, blocking road, etc."
@@ -247,6 +260,9 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
               value={description}
               onChangeText={setDescription}
             />
+            <Text style={[styles.karmaHintText, { color: theme.textSecondary }]}>
+              💡 More detail = More Karma! Earn +1 Swachhata Karma for every 2 characters in your notes.
+            </Text>
 
             <View style={{ height: 20 }} />
           </ScrollView>
@@ -597,5 +613,26 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     fontSize: 15,
     fontWeight: '800',
+  },
+  karmaHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  karmaCounterBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  karmaCounterText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  karmaHintText: {
+    fontSize: 11,
+    marginTop: 6,
+    fontStyle: 'italic',
   },
 });

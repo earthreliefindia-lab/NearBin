@@ -1,7 +1,7 @@
 {
   "name": "NearBin - Smart Public Waste Heatmap & Reporting",
   "short_name": "NearBin",
-  "description": "Civic waste reporting and cleanup tracking app with Snapchat-style density heatmap and live camera GPS verification by Earth Relief India.",
+  "description": "Civic waste reporting and cleanup tracking app with a live community map and camera GPS verification by Earth Relief India.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

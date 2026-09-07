@@ -10,12 +10,17 @@ import {
   useColorScheme,
   useWindowDimensions,
   Image,
+  Alert,
 } from 'react-native';
 import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, DarkColors, LightColors } from './src/theme/colors';
 import { WasteService } from './src/services/api';
+import { FirebaseAuthService } from './src/services/firebaseAuth';
+import { SupabaseAuthService } from './src/services/supabaseAuth';
+import { isSupabaseConfigured } from './src/services/supabaseClient';
+import { KarmaService } from './src/services/karmaService';
 
 // Screens & Modals
 import MapScreen from './src/screens/MapScreen';
@@ -24,6 +29,7 @@ import MenuScreen from './src/screens/MenuScreen';
 import AuthModal from './src/components/AuthModal';
 import OnboardingModal from './src/components/OnboardingModal';
 import SmartInstallModal from './src/components/SmartInstallModal';
+import AppLogo from './src/components/AppLogo';
 
 export default function App() {
   const { width } = useWindowDimensions();
@@ -103,25 +109,32 @@ export default function App() {
 
       // 1. Session check & non-blocking auth initialization
       try {
-        const saved = await AsyncStorage.getItem('@nearbin_user');
-        if (saved) {
-          const localUser = JSON.parse(saved);
-          setUser(localUser);
-
-          // Instantly sync latest profile from server if configured
-          if (localUser && localUser.id) {
-            WasteService.getProfile(localUser.id).then((freshUser) => {
-              if (freshUser) {
-                setUser(freshUser);
-                AsyncStorage.setItem('@nearbin_user', JSON.stringify(freshUser));
-              }
-            });
-          }
+        const redirectLogin = await FirebaseAuthService.getRedirectedGoogleUser();
+        if (redirectLogin?.success && redirectLogin.user) {
+          setUser(redirectLogin.user);
+          await AsyncStorage.setItem('@nearbin_user', JSON.stringify(redirectLogin.user));
+          WasteService.saveProfile(redirectLogin.user).catch(() => {});
         } else {
-          // Allow web view & map to fully render and display first, then gently pop up Google Sign-in overlay
-          setTimeout(() => {
-            setAuthModalVisible(true);
-          }, 800);
+          const saved = await AsyncStorage.getItem('@nearbin_user');
+          if (saved) {
+            const localUser = JSON.parse(saved);
+            setUser(localUser);
+
+            // Instantly sync latest profile from server if configured
+            if (localUser && localUser.id) {
+              WasteService.getProfile(localUser.id).then((freshUser) => {
+                if (freshUser) {
+                  setUser(freshUser);
+                  AsyncStorage.setItem('@nearbin_user', JSON.stringify(freshUser));
+                }
+              }).catch(() => {});
+            }
+          } else {
+            // Allow web view & map to fully render and display first, then gently pop up Google Sign-in overlay
+            setTimeout(() => {
+              setAuthModalVisible(true);
+            }, 800);
+          }
         }
       } catch (e) {
         setTimeout(() => {
@@ -177,12 +190,31 @@ export default function App() {
     }
   };
 
-  // Auth Handlers with instant server sync
+  // Auth Handlers with instant server sync and karma preservation
   const handleLoginSuccess = async (userData) => {
-    setUser(userData);
+    let mergedUser = { ...userData };
+    try {
+      const storedKarma = await AsyncStorage.getItem(`@nearbin_user_karma_${userData.id}`);
+      if (storedKarma != null) {
+        mergedUser.karma = Math.max(mergedUser.karma || 0, parseInt(storedKarma, 10));
+      }
+      const existingUserRaw = await AsyncStorage.getItem('@nearbin_user');
+      if (existingUserRaw) {
+        const existing = JSON.parse(existingUserRaw);
+        if (existing.welcomeClaimedAt) {
+          mergedUser.welcomeClaimedAt = existing.welcomeClaimedAt;
+        }
+        if (existing.karma && existing.karma > (mergedUser.karma || 0)) {
+          mergedUser.karma = existing.karma;
+        }
+      }
+    } catch (e) {}
+
+    setUser(mergedUser);
     setAuthModalVisible(false);
     try {
-      const serverUser = await WasteService.saveProfile(userData);
+      await AsyncStorage.setItem('@nearbin_user', JSON.stringify(mergedUser));
+      const serverUser = await WasteService.saveProfile(mergedUser);
       if (serverUser) {
         setUser(serverUser);
         await AsyncStorage.setItem('@nearbin_user', JSON.stringify(serverUser));
@@ -215,18 +247,55 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('@nearbin_user');
+      await FirebaseAuthService.signOut();
     } catch (e) {}
     setUser(null);
     setAuthModalVisible(true);
   };
 
-  // Citizen report submit
+  const handleClaimWelcomeBonus = async () => {
+    const result = await KarmaService.claimWelcomeBonus(user);
+    if (result && result.user) {
+      setUser(result.user);
+      await AsyncStorage.setItem('@nearbin_user', JSON.stringify(result.user));
+    }
+    return result;
+  };
+
+  const handleShareReferral = async () => KarmaService.shareReferral(user);
+
+  // Citizen report submit with character-based Karma rewards
   const handleSubmitReport = async (reportData) => {
+    const charCount = reportData.characterCount ?? (reportData.description || '').trim().length;
+    const notesBonus = Math.round(charCount * 0.5);
+    const earnedKarma = reportData.notesKarma || (50 + notesBonus);
+
     const result = await WasteService.submitReport({
       ...reportData,
       reportedBy: user?.name || 'Citizen',
+      karmaAwarded: earnedKarma,
     });
+
+    if (user) {
+      const nextKarma = (user.karma || 0) + earnedKarma;
+      const nextReports = (user.verifiedReports || 0) + 1;
+      const updatedUser = {
+        ...user,
+        karma: nextKarma,
+        verifiedReports: nextReports,
+      };
+      setUser(updatedUser);
+      await AsyncStorage.setItem('@nearbin_user', JSON.stringify(updatedUser));
+      WasteService.saveProfile(updatedUser).catch(() => {});
+    }
+
     await loadData();
+
+    Alert.alert(
+      '🎉 Report Published!',
+      `You earned +${earnedKarma} Swachhata Karma points!\n\n• Base Photo Reward: +50 Karma\n• Details & Notes Bonus (${charCount} chars): +${notesBonus} Karma\n\nThank you for keeping India clean!`
+    );
+
     return result;
   };
 
@@ -268,7 +337,7 @@ export default function App() {
           <View style={[styles.desktopHeader, { backgroundColor: activeColors.surface, borderBottomColor: activeColors.border }]}>
             <View style={styles.desktopBrandArea}>
               <View style={[styles.desktopLogoBadge, { backgroundColor: activeColors.primaryContainer }]}>
-                <Text style={{ fontSize: 22 }}>🌱</Text>
+                <AppLogo size={28} />
               </View>
               <View>
                 <Text style={[styles.desktopBrandTitle, { color: activeColors.textPrimary }]}>
@@ -376,9 +445,7 @@ export default function App() {
                       resizeMode="cover"
                     />
                   ) : (
-                    <Text style={{ fontSize: 16 }}>
-                      {user.avatar && user.avatar.length <= 4 ? user.avatar : '🌱'}
-                    </Text>
+                    <AppLogo size={22} />
                   )}
                   <Text style={[styles.desktopUserName, { color: activeColors.textPrimary }]} numberOfLines={1}>
                     {user.name || 'Citizen'}
@@ -415,7 +482,7 @@ export default function App() {
               isDark={isDark}
               isDesktop={isDesktop}
               onToggleTheme={handleToggleTheme}
-              onOpenInstall={() => setInstallModalVisible(true)}
+              onOpenInstall={Platform.OS === 'web' ? () => setInstallModalVisible(true) : undefined}
               user={user}
               onRequireAuth={() => setAuthModalVisible(true)}
             />
@@ -430,6 +497,7 @@ export default function App() {
                 onClaimRecyclables={handleClaimRecyclables}
                 currentRole="citizen"
                 isDark={isDark}
+                userLocation={userLocation}
                 onOpenReport={() => setCurrentTab('map')}
               />
             </View>
@@ -450,6 +518,9 @@ export default function App() {
                 onReplayTutorial={() => setTutorialVisible(true)}
                 onOpenInstall={() => setInstallModalVisible(true)}
                 onRequireAuth={() => setAuthModalVisible(true)}
+                onClaimWelcomeBonus={handleClaimWelcomeBonus}
+                onShareReferral={handleShareReferral}
+                userLocation={userLocation}
               />
             </View>
           )}
@@ -523,6 +594,9 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' ? 680 : undefined,
     alignSelf: 'center',
+    // Allows a standalone iPhone PWA to keep content below the notch while
+    // preserving the native SafeAreaView behaviour on Android and iOS apps.
+    paddingTop: Platform.OS === 'web' ? 'env(safe-area-inset-top)' : 0,
   },
   screenContainer: {
     flex: 1,
@@ -531,7 +605,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     paddingVertical: 8,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 10,
+    paddingBottom: Platform.OS === 'web' ? 'calc(10px + env(safe-area-inset-bottom))' : Platform.OS === 'ios' ? 24 : 10,
     justifyContent: 'space-around',
     alignItems: 'center',
   },
@@ -673,4 +747,3 @@ const styles = StyleSheet.create({
     maxWidth: 120,
   },
 });
-
