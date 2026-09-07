@@ -128,8 +128,34 @@ if (fs.existsSync(indexPath)) {
   html = html.replace(/<script src="[^"]*"[^>]*><\/script>/, newScriptTag);
   html = html.replace(/href="\/favicon\.ico"/g, 'href="favicon.ico"');
 
+  // Inject Firebase Official SDK for earthrelief.india@gmail.com (nearbin-ba519)
+  const firebaseScripts = `
+  <!-- Firebase Official SDK (nearbin-ba519) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script>
+    window.firebaseConfig = {
+      apiKey: "AIzaSyDQKTD3GpA9zJjF4HRAazxH9tuEJMQz8H0",
+      authDomain: "nearbin-ba519.firebaseapp.com",
+      projectId: "nearbin-ba519",
+      storageBucket: "nearbin-ba519.firebasestorage.app",
+      messagingSenderId: "810348191384",
+      appId: "1:810348191384:web:50d75b6d551cbabfa7baed",
+      measurementId: "G-14S7FNJTC7"
+    };
+    if (window.firebase && !window.firebase.apps.length) {
+      window.firebase.initializeApp(window.firebaseConfig);
+    }
+  </script>
+</body>`;
+
+  if (!html.includes('firebaseConfig')) {
+    html = html.replace('</body>', firebaseScripts);
+  }
+
   fs.writeFileSync(indexPath, html, 'utf8');
-  console.log(`[PWA Build] Enhanced dist/index.html to load bundle.js?v=${cacheBuster} directly from root.`);
+  console.log(`[PWA Build] Enhanced dist/index.html with Firebase SDK & root bundle.js?v=${cacheBuster}.`);
 }
+
 
 console.log('[PWA Build] Complete! dist/ is 100% PWA and self-hosting ready.');

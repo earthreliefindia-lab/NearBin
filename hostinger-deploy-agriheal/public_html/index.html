@@ -42,6 +42,24 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="bundle.js?v=mtqupelq" onerror="this.onerror=null;this.src='static/js/bundle.js';" defer></script>
+  <script src="bundle.js?v=mtqvwj8z" onerror="this.onerror=null;this.src='static/js/bundle.js';" defer></script>
+
+  <!-- Firebase Official SDK (nearbin-ba519) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script>
+    window.firebaseConfig = {
+      apiKey: "AIzaSyDQKTD3GpA9zJjF4HRAazxH9tuEJMQz8H0",
+      authDomain: "nearbin-ba519.firebaseapp.com",
+      projectId: "nearbin-ba519",
+      storageBucket: "nearbin-ba519.firebasestorage.app",
+      messagingSenderId: "810348191384",
+      appId: "1:810348191384:web:50d75b6d551cbabfa7baed",
+      measurementId: "G-14S7FNJTC7"
+    };
+    if (window.firebase && !window.firebase.apps.length) {
+      window.firebase.initializeApp(window.firebaseConfig);
+    }
+  </script>
 </body>
 </html>

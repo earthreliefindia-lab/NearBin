@@ -11,17 +11,19 @@ import { Platform } from 'react-native';
  */
 
 export const FIREBASE_CONFIG = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDQKTD3GpA9zJjF4HRAazxH9tuEJMQz8H0',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'nearbin-ba519.firebaseapp.com',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'nearbin-ba519',
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'nearbin-ba519.firebasestorage.app',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '810348191384',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:810348191384:web:50d75b6d551cbabfa7baed',
+  measurementId: 'G-14S7FNJTC7',
 };
 
 export const isFirebaseConfigured = () => {
   return Boolean(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey.length > 10);
 };
+
 
 let firebaseInitialized = false;
 
