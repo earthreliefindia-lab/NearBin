@@ -246,9 +246,17 @@ export const FirebaseAuthService = {
       };
     } catch (err) {
       console.error('[Firebase Auth] Google Auth Error:', err);
+      let errorMsg = err.message || 'Google Sign-In was cancelled or failed.';
+      if (err.code === 'auth/unauthorized-domain') {
+        errorMsg = 'Authorized Domain Notice: Please add nearbin.agriheal.in to Firebase Console (Authentication ➔ Settings ➔ Authorized Domains).';
+      } else if (err.code === 'auth/popup-blocked') {
+        errorMsg = 'Popup Blocked: Your browser blocked the sign-in window. Please enable popups for nearbin.agriheal.in and retry.';
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        errorMsg = 'popup-closed-by-user';
+      }
       return {
         success: false,
-        error: err.message || 'Google Sign-In was cancelled or failed.',
+        error: errorMsg,
       };
     }
   },

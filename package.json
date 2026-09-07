@@ -7,6 +7,7 @@
     "android": "expo run:android",
     "web": "expo start --web",
     "build:web": "expo export -p web && node scripts/prepare-pwa.js",
+    "package:deploy": "npm run build:web && python scripts/package-hostinger.py",
     "server": "node server/index.js",
     "dev": "concurrently \"node server/index.js\" \"expo start --web\""
   },
