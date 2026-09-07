@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">NearBin</string>
+    <string name="app_url">https://earthrelief.in/nearbin/</string>
+    <string name="error_offline_title">No Internet Connection</string>
+    <string name="error_offline_desc">Please check your mobile data or Wi-Fi to load live waste hotspots and reports.</string>
+    <string name="btn_retry">Retry Connection</string>
+</resources>

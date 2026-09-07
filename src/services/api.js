@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INITIAL_HOTSPOTS } from '../data/mockData';
 
 const STORAGE_KEY = '@nearbin_hotspots_v1';
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://nearbin-api.onrender.com/api';
 
 // Helper: Haversine distance in meters
 function getDistanceMeters(lat1, lon1, lat2, lon2) {

@@ -12,6 +12,7 @@ import FeedScreen from './src/screens/FeedScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import AuthModal from './src/components/AuthModal';
 import OnboardingModal from './src/components/OnboardingModal';
+import PWAInstallBanner from './src/components/PWAInstallBanner';
 
 export default function App() {
   const [currentTab, setCurrentTab] = useState('map'); // 'map' | 'feed' | 'menu'
@@ -114,6 +115,17 @@ export default function App() {
         console.log('Location acquisition skipped:', err?.message);
       }
     })();
+
+    // Register PWA Service Worker for zero-glitch offline caching
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const swPath = window.location.pathname.startsWith('/nearbin') ? '/nearbin/sw.js' : '/sw.js';
+        navigator.serviceWorker
+          .register(swPath)
+          .then((reg) => console.log('[NearBin PWA] Service Worker registered:', reg.scope))
+          .catch((err) => console.log('[NearBin PWA] SW registration notice:', err?.message));
+      });
+    }
   }, []);
 
   // Recenter button trigger
@@ -307,6 +319,9 @@ export default function App() {
             isDark={isDark}
           />
         )}
+
+        {/* PWA 1-Tap Home Screen Installation Prompt */}
+        <PWAInstallBanner isDark={isDark} />
       </SafeAreaView>
     </PaperProvider>
   );

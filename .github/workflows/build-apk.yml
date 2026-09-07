@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Standalone Android APK
@@ -21,44 +24,72 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: ☕ Setup Java
+      - name: ☕ Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: 📦 Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
-      - name: 🚀 Setup EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: 🔨 Generate Native Android Project
+        run: npx expo prebuild --platform android --no-install
+        env:
+          EXPO_PUBLIC_API_URL: https://nearbin-api.onrender.com/api
 
-      - name: 🔨 Build Android APK via EAS
-        if: env.EXPO_TOKEN != ''
-        run: eas build --platform android --profile preview --non-interactive
+      - name: ⚙️ Build Standalone APK with Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon || ./gradlew assembleDebug --no-daemon
+        env:
+          EXPO_PUBLIC_API_URL: https://nearbin-api.onrender.com/api
 
-      - name: 📝 Upload Release Artifacts
+      - name: 📦 Locate and Package APK
+        run: |
+          mkdir -p release
+          APK_FILE=$(find android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -f "$APK_FILE" ]; then
+            cp "$APK_FILE" release/NearBin.apk
+            echo "Successfully generated release/NearBin.apk"
+            ls -lh release/NearBin.apk
+          else
+            echo "Error: APK file not found!"
+            exit 1
+          fi
+
+      - name: 📝 Publish GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           name: NearBin Release ${{ github.ref_name }}
+          files: release/NearBin.apk
           body: |
-            ## 🌱 NearBin - Smart Public Waste Heatmap & Reporting APK
+            ## 🌱 NearBin - Smart Public Waste Heatmap & Reporting APK (${{ github.ref_name }})
             
-            ### ✨ What's New:
-            - **Google Sign-In & Mobile OTP Verification Gate**
+            Official civic waste management and reporting app created by **Earth Relief India** (Founder: Keshav Singh).
+            
+            ### ✨ Included Features:
+            - **Google Sign-In & Mobile OTP Verification**
             - **Instant Server-Side Profile Synchronization**
-            - **Mappls Leaflet Street Map with Snapchat-Style Glowing Heatmaps**
-            - **One-Tap GPS Recenter Accuracy Target Button (`🎯`)**
-            - **Multi-Category Waste Reporting (Plastic, Scrap, Wet Waste, Debris)**
-            - **Live Uncropped Camera Capture with GPS Watermark**
+            - **Live Camera GPS Watermarking (uncropped photos with auto geo-tagging)**
+            - **Snapchat-Style Garbage Density Heatmap (Mappls & Carto tiles)**
+            - **One-Tap High Accuracy GPS Recenter Target (`🎯`)**
+            - **Multi-Category Waste Selection (Plastic, Scrap, Food/Organic, Debris)**
             - **Govt Safai Mitra & Kabadiwala Recycler Portals**
-            - **Light & Dark Theme Toggle (OLED & Daylight modes)**
+            - **OLED Dark Theme & High-Contrast Daylight Mode**
+            - **Connected to 24/7 Production Cloud Server**: `https://nearbin-api.onrender.com/api`
             
-            Download and install `NearBin.apk` below on any Android phone!
+            ### 📱 Download & Installation:
+            1. Download `NearBin.apk` below.
+            2. On Android, tap the APK and select **"Allow from this source"** if prompted.
+            3. Open NearBin and start reporting!
+            
+            Website: [https://earthrelief.in/nearbin](https://earthrelief.in/nearbin)
           draft: false
           prerelease: false
         env:

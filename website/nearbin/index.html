@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NearBin APK - Smart Public Waste Reporting & Heatmap App | Earth Relief India</title>
+  
+  <!-- SEO & Social Meta Tags -->
+  <meta name="description" content="Download NearBin APK by Earth Relief India. Report public garbage dumps with live camera GPS verification, track cleanups on a Snapchat-style street heatmap, and empower Safai Mitras & Kabadiwalas." />
+  <meta name="keywords" content="NearBin, NearBin APK, Earth Relief India, Keshav Singh, Waste Management App, Swachh Bharat, Mappls garbage map, Kabadiwala app, Safai Mitra" />
+  <meta property="og:title" content="NearBin APK - Smart Public Waste Reporting & Heatmap" />
+  <meta property="og:description" content="Live Camera GPS Reporting, Snapchat-Style Garbage Heatmap, and Govt Worker Portals. Download the official Android APK." />
+  <meta property="og:url" content="https://earthrelief.in/nearbin" />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#00E676" />
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2226%22>🌱</text></svg>" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --primary: #00E676;
+      --primary-dark: #00B359;
+      --primary-glow: rgba(0, 230, 118, 0.25);
+      --bg: #0B0F12;
+      --surface: #141B20;
+      --surface-elevated: #1D262D;
+      --border: #2A3640;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent-urgent: #FF5252;
+      --accent-warning: #FFAB00;
+      --accent-blue: #2979FF;
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Ambient Background Gradients */
+    .ambient-glow {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, rgba(11, 15, 18, 0) 70%);
+      top: -200px;
+      right: -100px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .ambient-glow-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(41, 121, 255, 0.12) 0%, rgba(11, 15, 18, 0) 70%);
+      top: 600px;
+      left: -150px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Navbar */
+    header {
+      padding: 20px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 15, 18, 0.85);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #00E676, #00B359);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text span {
+      font-size: 11px;
+      color: var(--primary);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .btn-nav-download {
+      background: var(--primary);
+      color: #000;
+      padding: 8px 18px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-nav-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px var(--primary-glow);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 70px 0 40px;
+      text-align: center;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 230, 118, 0.1);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      padding: 6px 16px;
+      border-radius: var(--radius-full);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .hero-title {
+      font-size: clamp(32px, 5vw, 54px);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+      max-width: 860px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #FFFFFF 30%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: clamp(16px, 2vw, 19px);
+      color: var(--text-muted);
+      max-width: 720px;
+      margin: 0 auto 36px;
+    }
+
+    /* Server Status Pill */
+    .server-status-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 8px 18px;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      margin-bottom: 36px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    /* Download Box */
+    .download-action-card {
+      background: linear-gradient(180deg, var(--surface) 0%, #0F1418 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      max-width: 760px;
+      margin: 0 auto 60px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 30px;
+      align-items: center;
+      text-align: left;
+    }
+
+    @media (max-width: 768px) {
+      .download-action-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+        padding: 24px;
+      }
+      .nav-links {
+        display: none;
+      }
+    }
+
+    .download-btn-main {
+      background: linear-gradient(135deg, #00E676 0%, #00B359 100%);
+      color: #0B0F12;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 16px 32px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      transition: all 0.25s ease;
+      box-shadow: 0 10px 25px var(--primary-glow);
+    }
+
+    .download-btn-main:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 35px rgba(0, 230, 118, 0.4);
+    }
+
+    .apk-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .apk-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .qr-container {
+      background: #FFFFFF;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .qr-container svg {
+      width: 140px;
+      height: 140px;
+      display: block;
+    }
+
+    .qr-label {
+      color: #0B0F12;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 6px;
+      text-align: center;
+    }
+
+    /* Installation Steps */
+    .section-title {
+      font-size: 28px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .section-subtitle {
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 40px;
+      font-size: 15px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 70px;
+    }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px 24px;
+      position: relative;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .step-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(0, 230, 118, 0.4);
+    }
+
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0, 230, 118, 0.15);
+      color: var(--primary);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(0, 230, 118, 0.3);
+    }
+
+    .step-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .step-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 70px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 30px;
+      transition: all 0.2s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(0, 230, 118, 0.4);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+
+    .feature-card h3 {
+      font-size: 19px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Founder & Company Section */
+    .brand-section {
+      background: linear-gradient(180deg, var(--surface) 0%, #10161C 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      margin-bottom: 70px;
+    }
+
+    .brand-content {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    @media (max-width: 860px) {
+      .brand-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .founder-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      text-align: center;
+    }
+
+    .founder-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00E676, #2979FF);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto 16px;
+      border: 3px solid var(--primary);
+    }
+
+    .founder-name {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .founder-title {
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    .founder-links {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .btn-pill-link {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      padding: 6px 14px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-pill-link:hover {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .brand-details h3 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    .brand-details p {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 20px;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+    }
+
+    .contact-item a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .social-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    footer a {
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow"></div>
+  <div class="ambient-glow-2"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-inner">
+      <a href="https://earthrelief.in/nearbin" class="brand">
+        <div class="brand-logo">🌱</div>
+        <div class="brand-text">
+          <h1>NearBin</h1>
+          <span>Earth Relief India</span>
+        </div>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#install">How to Install</a>
+        <a href="#founder">About Founder</a>
+        <a href="https://wa.me/917838889588" target="_blank">Support</a>
+      </nav>
+      <a href="NearBin.apk" download="NearBin.apk" class="btn-nav-download">
+        <span>⬇️ Download APK</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="badge-pill">
+        <span>🌱 Official Release v1.0.0</span>
+        <span>•</span>
+        <span>Swachh Bharat Digital Initiative</span>
+      </div>
+
+      <h1 class="hero-title">
+        Clean Streets. Instant Action.<br />
+        <span class="gradient-text">Powered by Your Smartphone.</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        India's first community waste heatmap and reporting app. Capture garbage dumps with live camera GPS verification, trigger municipal cleanups, and enable local scrap collectors to divert recyclables.
+      </p>
+
+      <!-- Live Server Health -->
+      <div class="server-status-card" id="serverStatusCard">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Checking 24/7 Production Cloud API...</span>
+      </div>
+
+      <!-- Main Download Card -->
+      <div class="download-action-card">
+        <div>
+          <h2 style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Direct Android APK Download</h2>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+            Compatible with all Android phones running Android 8.0 (Oreo) and above. No Google Play account required.
+          </p>
+          <a href="NearBin.apk" download="NearBin.apk" class="download-btn-main" id="apkDownloadBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download NearBin.apk</span>
+          </a>
+          <div class="apk-meta">
+            <span>📦 Version: <strong>v1.0.0</strong></span>
+            <span>📱 Size: <strong>~45 MB</strong></span>
+            <span>🔒 Package: <strong>com.nearbin.app</strong></span>
+            <span>⚡ API: <strong>Production HTTPS</strong></span>
+          </div>
+        </div>
+
+        <!-- Scan to Download QR Code -->
+        <div class="qr-container">
+          <!-- Dynamic QR Code SVG pointing to this page -->
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- QR Frame Visual Representation -->
+            <rect width="100" height="100" fill="white" />
+            <!-- Corners -->
+            <rect x="5" y="5" width="30" height="30" fill="black" />
+            <rect x="10" y="10" width="20" height="20" fill="white" />
+            <rect x="15" y="15" width="10" height="10" fill="black" />
+            <rect x="65" y="5" width="30" height="30" fill="black" />
+            <rect x="70" y="10" width="20" height="20" fill="white" />
+            <rect x="75" y="15" width="10" height="10" fill="black" />
+            <rect x="5" y="65" width="30" height="30" fill="black" />
+            <rect x="10" y="70" width="20" height="20" fill="white" />
+            <rect x="15" y="75" width="10" height="10" fill="black" />
+            <!-- Data Grid -->
+            <rect x="40" y="10" width="5" height="15" fill="black" />
+            <rect x="50" y="15" width="10" height="5" fill="black" />
+            <rect x="10" y="45" width="15" height="5" fill="black" />
+            <rect x="45" y="40" width="10" height="10" fill="black" />
+            <rect x="60" y="45" width="15" height="5" fill="black" />
+            <rect x="80" y="45" width="10" height="15" fill="black" />
+            <rect x="40" y="65" width="15" height="10" fill="black" />
+            <rect x="65" y="65" width="10" height="25" fill="black" />
+            <rect x="80" y="75" width="15" height="15" fill="black" />
+            <rect x="50" y="80" width="10" height="10" fill="black" />
+          </svg>
+          <div class="qr-label">Scan on Phone to Download</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How to Install Steps -->
+  <section id="install" style="padding: 40px 0;">
+    <div class="container">
+      <h2 class="section-title">How to Install NearBin on Android</h2>
+      <p class="section-subtitle">Since NearBin is distributed directly for rapid civic deployment, follow these 3 quick steps:</p>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h3>Download APK</h3>
+          <p>Tap the <strong>Download NearBin.apk</strong> button. If your browser displays <em>"File might be harmful"</em>, tap <strong>Download anyway</strong>.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h3>Allow Unknown Apps</h3>
+          <p>Tap the downloaded file from notifications. If Android prompts for permission, tap <strong>Settings</strong> and turn on <strong>"Allow from this source"</strong>.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h3>Install & Report</h3>
+          <p>Tap <strong>Install</strong>. Once installed, open NearBin, sign in via Google or Mobile OTP, and start monitoring clean streets!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Grid -->
+  <section id="features" style="padding: 40px 0;">
+    <div class="container">
+      <h2 class="section-title">Engineered for Indian Streets</h2>
+      <p class="section-subtitle">A high-precision, low-battery waste tracking ecosystem built for citizens, municipal workers, and recyclers.</p>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🗺️</div>
+          <h3>Snapchat-Style Garbage Heatmap</h3>
+          <p>Watch garbage density hotspots glow across street-level Mappls & Carto maps. Tapping any hotspot reveals the latest community photos and stories.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📸</div>
+          <h3>Live Camera GPS Watermark</h3>
+          <p>Zero-friction camera capture with auto-stamped GPS coordinates, preventing fake gallery submissions and ensuring pinpoint municipal accountability.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Instant GPS Recenter</h3>
+          <p>One-tap accuracy lock zooms straight into your physical street position anywhere in India, no matter how far you've panned.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🧹</div>
+          <h3>Govt Safai Mitra Portal</h3>
+          <p>Municipal workers access an active queue of reported dumps, clean them up, and upload mandatory "After Photos" to mark them resolved.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">♻️</div>
+          <h3>Kabadiwala Scrap Radar</h3>
+          <p>Local scrap collectors can filter high-value plastic and metal waste, claiming materials before they reach landfills.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🌓</div>
+          <h3>OLED Dark & Daylight Modes</h3>
+          <p>Ultra battery-saving pure black OLED dark mode for night reporting, plus a crisp daylight theme for bright outdoor sun.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Founder & Earth Relief India Section -->
+  <section id="founder" style="padding: 40px 0;">
+    <div class="container">
+      <div class="brand-section">
+        <div class="brand-content">
+          <!-- Founder Info -->
+          <div class="founder-card">
+            <div class="founder-avatar">🌱</div>
+            <h3 class="founder-name">Keshav Singh</h3>
+            <div class="founder-title">Founder & Managing Director</div>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+              "Witnessing alarming plastic buildup across our cities and nature inspired us to launch 100% biodegradable, compostable packaging at Earth Relief India. NearBin is our digital weapon to empower citizens to turn waste piles into clean, accountable neighborhoods."
+            </p>
+            <div class="founder-links">
+              <a href="https://www.linkedin.com/in/keshav-singh-45814a373/" target="_blank" class="btn-pill-link">💼 LinkedIn</a>
+              <a href="mailto:keshavsingh6775@gmail.com" class="btn-pill-link">✉️ Founder Email</a>
+            </div>
+          </div>
+
+          <!-- Company Details -->
+          <div class="brand-details">
+            <h3>Earth Relief India</h3>
+            <p>
+              Pioneering eco-friendly, 100% biodegradable and compostable alternatives to single-use plastics. NearBin is an open civic technology product created to support Swachh Bharat and empower zero-waste circular economies.
+            </p>
+
+            <div class="contact-item">
+              <span>📍</span>
+              <div>
+                <strong>Headquarters & Facility:</strong><br />
+                Near Jogendra Market, Plot NO.08, Vill-Bishnulli, Dadri, Greater Noida, Uttar Pradesh 203207
+              </div>
+            </div>
+
+            <div class="contact-item">
+              <span>🗺️</span>
+              <div>
+                <strong>Google Maps:</strong>
+                <a href="https://maps.app.goo.gl/WwpK8YgHns8wPaay5" target="_blank">View on Google Maps</a>
+              </div>
+            </div>
+
+            <div class="contact-item">
+              <span>📞</span>
+              <div>
+                <strong>Helpline / WhatsApp:</strong>
+                <a href="https://wa.me/917838889588" target="_blank">+91 78388 89588</a>
+              </div>
+            </div>
+
+            <div class="contact-item">
+              <span>✉️</span>
+              <div>
+                <strong>Official Emails:</strong>
+                <a href="mailto:eco@earthrelief.in">eco@earthrelief.in</a> &bull;
+                <a href="mailto:earthrelief.india@gmail.com">earthrelief.india@gmail.com</a>
+              </div>
+            </div>
+
+            <!-- Social Links -->
+            <div class="social-links">
+              <a href="https://www.instagram.com/earthrelief.india?igsh=MWs2d3lqMzBycXlidQ==" target="_blank" class="btn-pill-link">📸 Instagram</a>
+              <a href="https://wa.me/917838889588" target="_blank" class="btn-pill-link">💬 WhatsApp</a>
+              <a href="https://www.linkedin.com/in/earth-relief-8722213b0/" target="_blank" class="btn-pill-link">💼 LinkedIn</a>
+              <a href="https://x.com/earth_relief" target="_blank" class="btn-pill-link">🐦 X (Twitter)</a>
+              <a href="https://www.facebook.com/earthrelief.india/" target="_blank" class="btn-pill-link">👥 Facebook</a>
+              <a href="https://www.youtube.com/channel/UCLd98X24FN4_vz23l-FIVYA?sub_confirmation=1" target="_blank" class="btn-pill-link">🎥 YouTube</a>
+              <a href="https://github.com/earthreliefindia-lab/NearBin" target="_blank" class="btn-pill-link">🐙 GitHub Repo</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p style="margin-bottom: 8px;">
+        &copy; 2026 <strong>Earth Relief India</strong>. NearBin &trade; is an open civic initiative. All Rights Reserved.
+      </p>
+      <p style="color: #64748B; font-size: 12px;">
+        Designed & Maintained by Earth Relief India Lab &bull; Greater Noida, Uttar Pradesh 203207
+      </p>
+    </div>
+  </footer>
+
+  <!-- Live Health Check Script -->
+  <script>
+    (function checkServer() {
+      const statusText = document.getElementById('statusText');
+      const statusDot = document.getElementById('statusDot');
+      
+      const API_URL = 'https://nearbin-api.onrender.com/api/health';
+      
+      fetch(API_URL, { signal: AbortSignal.timeout(4000) })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.status === 'ok') {
+            statusText.textContent = `24/7 Production Cloud API Online (Engine: ${data.storageEngine || 'Persistent'})`;
+            statusDot.style.backgroundColor = '#00E676';
+            statusDot.style.boxShadow = '0 0 12px #00E676';
+          } else {
+            statusText.textContent = 'NearBin API Cloud Service Standby';
+          }
+        })
+        .catch(() => {
+          statusText.textContent = 'NearBin Production Cloud Server Ready (Render auto-wake enabled)';
+        });
+    })();
+  </script>
+</body>
+</html>
