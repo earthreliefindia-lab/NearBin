@@ -45,6 +45,7 @@ export default function App() {
   
   // Mandatory User Authentication & Skippable Tutorial State
   const [user, setUser] = useState(null);
+  const [votedHotspotIds, setVotedHotspotIds] = useState([]);
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [tutorialVisible, setTutorialVisible] = useState(false);
   const [installModalVisible, setInstallModalVisible] = useState(false);
@@ -92,6 +93,23 @@ export default function App() {
     } catch (e) {}
   };
 
+  // Check pending referral bonus when user joins
+  const checkPendingReferral = async (currentUser) => {
+    if (!currentUser) return;
+    try {
+      const res = await KarmaService.processReferralOnJoin(currentUser);
+      if (res?.rewarded && res.user) {
+        setUser(res.user);
+        Alert.alert(
+          '🎉 Referral Bonus Credited!',
+          `You joined via invite code ${res.referrerCode}!\n\n+300 Swachhata Karma points have been added to your profile balance.`
+        );
+      }
+    } catch (e) {
+      console.log('Referral processing notice:', e);
+    }
+  };
+
   // Check saved user session & load initial data
   useEffect(() => {
     (async () => {
@@ -107,6 +125,25 @@ export default function App() {
         }
       } catch (e) {}
 
+      // 0b. Load user's voted hotspot IDs (single vote restriction per user)
+      try {
+        const savedVoted = await AsyncStorage.getItem('@nearbin_voted_hotspots');
+        if (savedVoted) {
+          setVotedHotspotIds(JSON.parse(savedVoted));
+        }
+      } catch (e) {}
+
+      // 0c. Capture referral code from URL query param if present (?ref=CODE)
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.search) {
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const refCode = urlParams.get('ref');
+          if (refCode && refCode.trim()) {
+            await AsyncStorage.setItem('@nearbin_pending_ref', refCode.trim());
+          }
+        } catch (e) {}
+      }
+
       // 1. Session check & non-blocking auth initialization
       try {
         const redirectLogin = await FirebaseAuthService.getRedirectedGoogleUser();
@@ -114,11 +151,13 @@ export default function App() {
           setUser(redirectLogin.user);
           await AsyncStorage.setItem('@nearbin_user', JSON.stringify(redirectLogin.user));
           WasteService.saveProfile(redirectLogin.user).catch(() => {});
+          checkPendingReferral(redirectLogin.user);
         } else {
           const saved = await AsyncStorage.getItem('@nearbin_user');
           if (saved) {
             const localUser = JSON.parse(saved);
             setUser(localUser);
+            checkPendingReferral(localUser);
 
             // Instantly sync latest profile from server if configured
             if (localUser && localUser.id) {
@@ -218,6 +257,9 @@ export default function App() {
       if (serverUser) {
         setUser(serverUser);
         await AsyncStorage.setItem('@nearbin_user', JSON.stringify(serverUser));
+        checkPendingReferral(serverUser);
+      } else {
+        checkPendingReferral(mergedUser);
       }
     } catch (e) {
       console.log('Login server sync error:', e);
@@ -299,9 +341,36 @@ export default function App() {
     return result;
   };
 
-  // Upvote
+  // Upvote / Single-vote per user restriction
   const handleUpvote = async (id) => {
-    await WasteService.upvoteHotspot(id);
+    if (votedHotspotIds.includes(id)) {
+      Alert.alert('Notice', 'You have already confirmed and voted for this spot.');
+      return;
+    }
+    const voterId = user?.id || 'anon_device';
+    const res = await WasteService.upvoteHotspot(id, voterId);
+    if (res && res.alreadyVoted) {
+      Alert.alert('Notice', 'You have already voted for this spot.');
+      return;
+    }
+
+    const nextVoted = [...votedHotspotIds, id];
+    setVotedHotspotIds(nextVoted);
+    try {
+      await AsyncStorage.setItem('@nearbin_voted_hotspots', JSON.stringify(nextVoted));
+    } catch (e) {}
+
+    // Civic engagement karma reward (+10 Karma for community vote)
+    if (user) {
+      const nextKarma = (user.karma || 0) + 10;
+      const updatedUser = { ...user, karma: nextKarma };
+      setUser(updatedUser);
+      try {
+        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(updatedUser));
+        WasteService.saveProfile(updatedUser).catch(() => {});
+      } catch (e) {}
+    }
+
     await loadData();
   };
 
@@ -485,6 +554,7 @@ export default function App() {
               onOpenInstall={Platform.OS === 'web' ? () => setInstallModalVisible(true) : undefined}
               user={user}
               onRequireAuth={() => setAuthModalVisible(true)}
+              votedHotspotIds={votedHotspotIds}
             />
           )}
 
@@ -499,6 +569,7 @@ export default function App() {
                 isDark={isDark}
                 userLocation={userLocation}
                 onOpenReport={() => setCurrentTab('map')}
+                votedHotspotIds={votedHotspotIds}
               />
             </View>
           )}

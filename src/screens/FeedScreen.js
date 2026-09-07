@@ -44,6 +44,7 @@ export default function FeedScreen({
   isDark = true,
   userLocation,
   onOpenReport,
+  votedHotspotIds = [],
 }) {
   const [selectedHotspot, setSelectedHotspot] = useState(null);
   const [selectedRadius, setSelectedRadius] = useState('all'); // 'all' | '500m' | '1km' | '5km' | '10km'
@@ -152,12 +153,19 @@ export default function FeedScreen({
                 <Text style={[styles.inlineUpvoteText, { color: theme.primary }]}>↗ Share</Text>
               </TouchableOpacity>
               {!isCleaned && (
-                <TouchableOpacity
-                  style={[styles.inlineUpvoteBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
-                  onPress={() => onUpvote(item.id)}
-                >
-                  <Text style={[styles.inlineUpvoteText, { color: theme.primary }]}>👍 Confirm</Text>
-                </TouchableOpacity>
+                (votedHotspotIds || []).includes(item.id) ? (
+                  <View style={[styles.votedBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                    <Text style={[styles.votedBadgeText, { color: theme.primary }]}>✓ Voted</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.inlineUpvoteBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+                    onPress={() => onUpvote(item.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.inlineUpvoteText, { color: theme.primary }]}>👍 Vote</Text>
+                  </TouchableOpacity>
+                )
               )}
             </View>
           </View>
@@ -301,6 +309,7 @@ export default function FeedScreen({
         onClose={() => setSelectedHotspot(null)}
         currentRole={currentRole}
         onUpvote={onUpvote}
+        hasVoted={(votedHotspotIds || []).includes(selectedHotspot?.id)}
         onUpdateStatus={onUpdateStatus}
         onClaimRecyclables={onClaimRecyclables}
       />

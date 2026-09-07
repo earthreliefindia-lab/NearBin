@@ -60,29 +60,13 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
       }
     } catch (e) {
       console.log('Camera error:', e);
-      Alert.alert('Camera Error', 'Could not open camera. You can select from gallery.');
-    }
-  };
-
-  // Select from gallery without cropping
-  const handlePickGallery = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false, // NO CROPPING
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets && result.assets[0]) {
-        setPhotoUri(result.assets[0].uri);
-      }
-    } catch (e) {
-      console.log('Gallery pick error:', e);
+      Alert.alert('Camera Error', 'Could not open camera. Please grant camera permission in your browser or phone settings.');
     }
   };
 
   const handleSendReport = async () => {
     if (!photoUri) {
-      Alert.alert('Photo Required', 'Please snap or upload a photo of the garbage to proceed.');
+      Alert.alert('Photo Required', 'Please capture a live camera photo of the garbage dump to proceed.');
       return;
     }
 
@@ -157,18 +141,20 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
                 <View style={[styles.emptyIconCircle, { borderColor: theme.border }]}>
                   <Text style={styles.emptyCameraIcon}>📷</Text>
                 </View>
-                <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Upload Waste Photo</Text>
-                <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>No crop required • Pure uncut camera photo</Text>
+                <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Capture Live Waste Photo</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textMuted }]}>
+                  Live camera capture only • Anti-fraud proof for municipal Safai Mitras
+                </Text>
 
-                <View style={styles.uploadButtonsRow}>
-                  <TouchableOpacity style={[styles.cameraActionBtn, { backgroundColor: theme.primary }]} onPress={handleTakePhoto}>
-                    <Text style={[styles.cameraActionText, { color: theme.textInverse }]}>📷 Take Live Photo</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={[styles.galleryActionBtn, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]} onPress={handlePickGallery}>
-                    <Text style={[styles.galleryActionText, { color: theme.textPrimary }]}>🖼️ Choose Gallery</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={[styles.cameraActionBtnFull, { backgroundColor: theme.primary }]}
+                  onPress={handleTakePhoto}
+                  activeOpacity={0.85}
+                >
+                  <Text style={[styles.cameraActionText, { color: theme.textInverse }]}>
+                    📷 Open Camera & Snap Waste
+                  </Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <View style={[styles.photoBox, { backgroundColor: theme.elevated, borderColor: theme.border }]}>
@@ -391,38 +377,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  uploadButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
+  cameraActionBtnFull: {
     width: '100%',
-  },
-  cameraActionBtn: {
-    flex: 1,
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cameraActionText: {
     color: Colors.textInverse,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-  },
-  galleryActionBtn: {
-    flex: 1,
-    backgroundColor: Colors.elevated,
-    paddingVertical: 12,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  galleryActionText: {
-    color: Colors.textPrimary,
-    fontSize: 13,
-    fontWeight: '700',
   },
   photoBox: {
     width: '100%',

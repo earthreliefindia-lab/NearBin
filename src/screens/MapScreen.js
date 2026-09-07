@@ -30,6 +30,7 @@ export default function MapScreen({
   onOpenInstall,
   user,
   onRequireAuth,
+  votedHotspotIds = [],
 }) {
   const { width } = useWindowDimensions();
   const compactHeader = width < 390;
@@ -380,6 +381,7 @@ export default function MapScreen({
         visible={!!selectedHotspot}
         onClose={() => setSelectedHotspot(null)}
         currentRole={currentRole}
+        hasVoted={(votedHotspotIds || []).includes(selectedHotspot?.id)}
         onUpvote={async (id) => {
           if (!user) {
             if (onRequireAuth) onRequireAuth();

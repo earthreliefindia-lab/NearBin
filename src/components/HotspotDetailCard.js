@@ -10,6 +10,7 @@ export default function HotspotDetailCard({
   onClose,
   currentRole = 'citizen',
   onUpvote,
+  hasVoted = false,
   onUpdateStatus,
   onClaimRecyclables,
 }) {
@@ -24,6 +25,7 @@ export default function HotspotDetailCard({
 
   // Role Action Handlers
   const handleUpvoteClick = async () => {
+    if (hasVoted) return;
     setIsActionLoading(true);
     try {
       await onUpvote(hotspot.id);
@@ -177,17 +179,21 @@ export default function HotspotDetailCard({
             {/* 1. CITIZEN ROLE ACTIONS */}
             {currentRole === 'citizen' && (
               <TouchableOpacity
-                style={[styles.primaryActionBtn, isActionLoading && { opacity: 0.6 }]}
+                style={[
+                  styles.primaryActionBtn,
+                  (isActionLoading || isCleaned || hasVoted) && { opacity: 0.7 },
+                  hasVoted && { backgroundColor: Colors.surfaceVariant, borderWidth: 1, borderColor: Colors.primary },
+                ]}
                 onPress={handleUpvoteClick}
-                disabled={isActionLoading || isCleaned}
+                disabled={isActionLoading || isCleaned || hasVoted}
               >
                 {isActionLoading ? (
-                  <ActivityIndicator color={Colors.textInverse} />
+                  <ActivityIndicator color={hasVoted ? Colors.primary : Colors.textInverse} />
                 ) : (
                   <>
-                    <Text style={styles.actionBtnIcon}>👍</Text>
-                    <Text style={styles.primaryActionText}>
-                      {isCleaned ? 'Cleaned Up Already' : 'Confirm Spot (+1 Upvote)'}
+                    <Text style={styles.actionBtnIcon}>{hasVoted ? '✓' : '👍'}</Text>
+                    <Text style={[styles.primaryActionText, hasVoted && { color: Colors.primary }]}>
+                      {isCleaned ? 'Cleaned Up Already' : hasVoted ? '✓ Voted (+1 Recorded)' : 'Vote For Cleanup (+1 Upvote)'}
                     </Text>
                   </>
                 )}

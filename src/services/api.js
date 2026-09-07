@@ -194,18 +194,29 @@ export const WasteService = {
     };
   },
 
-  // Upvote / Confirm hotspot
-  async upvoteHotspot(id) {
+  // Upvote / Vote hotspot (Strict 1-Vote per user)
+  async upvoteHotspot(id, voterId = 'citizen') {
     const list = await getStoredHotspots();
     const item = list.find(h => h.id === id);
     if (item) {
+      if (!item.voters) item.voters = [];
+      if (voterId && item.voters.includes(voterId)) {
+        return { success: false, alreadyVoted: true, hotspot: item };
+      }
+      if (voterId) {
+        item.voters.push(voterId);
+      }
       item.upvotes = (item.upvotes || 0) + 1;
       if (item.upvotes >= 15) item.urgency = 'critical';
       else if (item.upvotes >= 8) item.urgency = 'high';
       await saveStoredHotspots(list);
 
       if (API_BASE) {
-        fetch(`${API_BASE}/reports/${id}/upvote`, { method: 'POST' }).catch(() => {});
+        fetch(`${API_BASE}/reports/${id}/upvote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voterId })
+        }).catch(() => {});
       }
       return { success: true, hotspot: item };
     }

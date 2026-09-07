@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,14 @@ import {
   Linking,
   Image,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Colors, DarkColors, LightColors } from '../theme/colors';
 import WorkerScreen from './WorkerScreen';
 import ScrapPickerScreen from './ScrapPickerScreen';
 import AppLogo from '../components/AppLogo';
 import { getCityCleanlinessData } from '../services/governmentCleanlinessData';
+import { KarmaService } from '../services/karmaService';
 
 // Earth Relief India Official Information
 const BRAND_INFO = {
@@ -66,6 +68,18 @@ export default function MenuScreen({
   const [activeSubScreen, setActiveSubScreen] = useState(null); // 'worker' | 'scrap' | 'about' | null
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isClaimingWelcome, setIsClaimingWelcome] = useState(false);
+  const [copiedReferral, setCopiedReferral] = useState(false);
+  const [referralStats, setReferralStats] = useState({ friendsJoined: 0, karmaEarned: 0 });
+
+  useEffect(() => {
+    if (user) {
+      KarmaService.fetchReferralStats(user)
+        .then((stats) => {
+          if (stats) setReferralStats(stats);
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   // Edit profile form state
   const [editName, setEditName] = useState(user?.name || 'Keshaw Sharma');
@@ -137,6 +151,27 @@ export default function MenuScreen({
       await onShareReferral();
     } catch (error) {
       if (error?.name !== 'AbortError') Alert.alert('Sharing unavailable', 'Please try again from your device.');
+    }
+  };
+
+  const handleCopyReferral = async () => {
+    if (!user) return;
+    const url = KarmaService.referralUrl(user);
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else if (typeof document !== 'undefined') {
+        const el = document.createElement('textarea');
+        el.value = url;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
+      setCopiedReferral(true);
+      setTimeout(() => setCopiedReferral(false), 2500);
+    } catch (e) {
+      Alert.alert('Referral Link', url);
     }
   };
 
@@ -367,7 +402,7 @@ export default function MenuScreen({
         <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>KARMA BOOSTERS</Text>
         {user ? (
           <View style={[styles.boosterCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
-            {!user.welcomeClaimedAt ? (
+            {!user.welcomeClaimedAt && (
               <TouchableOpacity
                 style={[styles.welcomeReward, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
                 onPress={handleClaimWelcome}
@@ -380,20 +415,62 @@ export default function MenuScreen({
                 </View>
                 {isClaimingWelcome ? <ActivityIndicator color={theme.primary} /> : <Text style={[styles.claimText, { color: theme.primary }]}>Claim</Text>}
               </TouchableOpacity>
-            ) : (
-              <View style={[styles.rewardClaimed, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
-                <Text style={[styles.boosterTitle, { color: theme.primary }]}>✓ Welcome reward claimed</Text>
-                <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Your Karma is securely linked to this Google account.</Text>
-              </View>
             )}
 
-            <TouchableOpacity style={[styles.referralReward, { borderColor: theme.border }]} onPress={handleShareReferral} activeOpacity={0.8}>
-              <View style={styles.boosterTextCol}>
-                <Text style={[styles.boosterTitle, { color: theme.textPrimary }]}>Invite a neighbourhood friend</Text>
-                <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Share your personal NearBin referral link.</Text>
+            {/* Dedicated Referral Invite System with unique link and instant reward */}
+            <View style={[styles.referralCardBox, { backgroundColor: isDark ? '#0F291E' : '#F0FDF4', borderColor: isDark ? '#166534' : '#BBF7D0' }]}>
+              <View style={styles.referralHeaderRow}>
+                <View style={[styles.referralIconCircle, { backgroundColor: isDark ? '#14532D' : '#DCFCE7' }]}>
+                  <Text style={{ fontSize: 18 }}>🤝</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.referralTitle, { color: theme.textPrimary }]}>Invite Friends & Earn Karma</Text>
+                  <Text style={[styles.referralBadgeText, { color: isDark ? '#4ADE80' : '#15803D' }]}>
+                    +300 for friend • +100 for you
+                  </Text>
+                </View>
+                <View style={[styles.referralCodeBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                  <Text style={[styles.referralCodeBadgeText, { color: theme.primary }]}>
+                    {KarmaService.getReferralCode(user)}
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.claimText, { color: theme.primary }]}>Share ↗</Text>
-            </TouchableOpacity>
+
+              <Text style={[styles.referralDescription, { color: theme.textSecondary }]}>
+                Share your personal link. New users joining via your link receive <Text style={{ fontWeight: '800', color: theme.primary }}>300 Karma points</Text>, and you receive <Text style={{ fontWeight: '800', color: theme.primary }}>+100 Karma points</Text> credited to your profile!
+              </Text>
+
+              {/* Unique Referral Link Box with Copy Button */}
+              <View style={[styles.referralLinkContainer, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+                <Text numberOfLines={1} style={[styles.referralLinkText, { color: theme.textPrimary }]}>
+                  {KarmaService.referralUrl(user)}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.referralCopyBtn, { backgroundColor: copiedReferral ? '#16A34A' : theme.primary }]}
+                  onPress={handleCopyReferral}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.referralCopyBtnText}>{copiedReferral ? '✓ Copied!' : '📋 Copy'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Stats & Share Action Row */}
+              <View style={styles.referralFooterRow}>
+                <View style={styles.referralStatsPill}>
+                  <Text style={[styles.referralStatsText, { color: theme.textSecondary }]}>
+                    Friends: <Text style={{ fontWeight: '800', color: theme.primary }}>{referralStats.friendsJoined}</Text>  |  Earned: <Text style={{ fontWeight: '800', color: theme.primary }}>+{referralStats.karmaEarned} pts</Text>
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.referralShareBtn, { backgroundColor: theme.primary }]}
+                  onPress={handleShareReferral}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.referralShareBtnText}>Share Link ↗</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
             <View style={[styles.adNotice, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
               <Text style={styles.settingEmoji}>🎬</Text>
@@ -1173,17 +1250,96 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 12,
   },
-  rewardClaimed: {
-    borderRadius: 12,
+  referralCardBox: {
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 12,
+    padding: 14,
+    gap: 10,
   },
-  referralReward: {
+  referralHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1,
-    paddingTop: 12,
-    gap: 12,
+    gap: 10,
+  },
+  referralIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  referralTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  referralBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  referralCodeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  referralCodeBadgeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  referralDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  referralLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingLeft: 10,
+    paddingRight: 4,
+    paddingVertical: 4,
+    gap: 8,
+  },
+  referralLinkText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  referralCopyBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  referralCopyBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  referralFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingTop: 4,
+  },
+  referralStatsPill: {
+    flex: 1,
+  },
+  referralStatsText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  referralShareBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  referralShareBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
   },
   adNotice: {
     flexDirection: 'row',
