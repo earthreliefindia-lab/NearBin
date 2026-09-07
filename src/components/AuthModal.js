@@ -15,9 +15,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkColors, LightColors } from '../theme/colors';
 import { FirebaseAuthService, isFirebaseConfigured } from '../services/firebaseAuth';
 
-export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
+export default function AuthModal({ visible, onLoginSuccess, isDark = true, onClose }) {
   const [isLoading, setIsLoading] = useState(false);
-  const [showFirebaseInfo, setShowFirebaseInfo] = useState(false);
 
   const theme = isDark ? DarkColors : LightColors;
 
@@ -44,176 +43,164 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={[styles.screen, { backgroundColor: theme.background }]}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          {/* Top Brand Header */}
-          <View style={styles.brandContainer}>
-            <View style={[styles.logoBadge, { backgroundColor: theme.primaryContainer }]}>
-              <Text style={styles.logoIcon}>🌱</Text>
-            </View>
-            <Text style={[styles.appName, { color: theme.textPrimary }]}>
-              Near<Text style={{ color: theme.primary }}>Bin</Text>
-            </Text>
-            <Text style={[styles.appTagline, { color: theme.textSecondary }]}>
-              Civic Cleanliness & Live Waste Heatmap
-            </Text>
-            <View style={[styles.govtPledgeBanner, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
-              <Text style={styles.pledgeEmoji}>🇮🇳</Text>
-              <Text style={[styles.pledgeText, { color: theme.textSecondary }]}>
-                Swachh Bharat Digital Mission Partner Portal
-              </Text>
-            </View>
-          </View>
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalContentWrapper}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+            <View style={[styles.authCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              {/* Close Button top-right */}
+              {onClose && (
+                <TouchableOpacity
+                  style={[styles.closeBtn, { backgroundColor: theme.surfaceVariant }]}
+                  onPress={onClose}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.closeBtnText, { color: theme.textPrimary }]}>✕</Text>
+                </TouchableOpacity>
+              )}
 
-          {/* Auth Card */}
-          <View style={[styles.authCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
-            <View style={styles.formContainer}>
-              <View style={styles.googleIntroBox}>
-                <Text style={[styles.googleIntroTitle, { color: theme.textPrimary }]}>
-                  Sign in with Google Account
+              {/* Top Brand Header */}
+              <View style={styles.brandContainer}>
+                <View style={[styles.logoBadge, { backgroundColor: theme.primaryContainer }]}>
+                  <Text style={styles.logoIcon}>🌱</Text>
+                </View>
+                <Text style={[styles.appName, { color: theme.textPrimary }]}>
+                  Near<Text style={{ color: theme.primary }}>Bin</Text>
                 </Text>
-                <Text style={[styles.googleIntroSub, { color: theme.textSecondary }]}>
-                  One-tap secure access. Automatically sync your citizen profile, verified cleanliness reports, and community karma badges across all your devices.
+                <Text style={[styles.appTagline, { color: theme.textSecondary }]}>
+                  Civic Cleanliness & Live Waste Heatmap
                 </Text>
+                <View style={[styles.govtPledgeBanner, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+                  <Text style={styles.pledgeEmoji}>🇮🇳</Text>
+                  <Text style={[styles.pledgeText, { color: theme.textSecondary }]}>
+                    Swachh Bharat Digital Mission Partner Portal
+                  </Text>
+                </View>
               </View>
 
-              {/* Google Branded Button */}
-              <TouchableOpacity
-                style={[styles.googleButton, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
-                onPress={handleGoogleSignIn}
-                disabled={isLoading}
-                activeOpacity={0.8}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={theme.primary} size="small" />
-                ) : (
-                  <>
-                    <View style={styles.googleIconCircle}>
-                      <Text style={styles.googleGLetter}>G</Text>
-                    </View>
-                    <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>
-                      Continue with Google
+              {/* Form Container */}
+              <View style={styles.formContainer}>
+                <View style={styles.googleIntroBox}>
+                  <Text style={[styles.googleIntroTitle, { color: theme.textPrimary }]}>
+                    Sign in with Google Account
+                  </Text>
+                  <Text style={[styles.googleIntroSub, { color: theme.textSecondary }]}>
+                    One-tap secure access. Automatically sync your citizen profile, verified cleanliness reports, and community karma badges across all your devices.
+                  </Text>
+                </View>
+
+                {/* Google Branded Button */}
+                <TouchableOpacity
+                  style={[styles.googleButton, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+                  onPress={handleGoogleSignIn}
+                  disabled={isLoading}
+                  activeOpacity={0.8}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color={theme.primary} size="small" />
+                  ) : (
+                    <>
+                      <View style={styles.googleIconCircle}>
+                        <Text style={styles.googleGLetter}>G</Text>
+                      </View>
+                      <Text style={[styles.googleButtonText, { color: theme.textPrimary }]}>
+                        Continue with Google
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* Explore Map First (Skip button) */}
+                {onClose && (
+                  <TouchableOpacity
+                    style={[styles.exploreBtn, { borderColor: theme.border }]}
+                    onPress={onClose}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.exploreBtnText, { color: theme.textSecondary }]}>
+                      🗺️ Explore Live Heatmap First
                     </Text>
-                  </>
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
 
-              <View style={styles.safetyGuaranteeRow}>
-                <Text style={styles.safetyLockIcon}>🔒</Text>
-                <Text style={[styles.safetyText, { color: theme.textMuted }]}>
-                  Official Google OAuth 2.0 • 256-Bit SSL Encrypted
-                </Text>
-              </View>
-
-              {/* Feature Highlights */}
-              <View style={[styles.featuresBox, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>📍</Text>
-                  <Text style={[styles.featureText, { color: theme.textSecondary }]}>
-                    Pin and report local waste hotspots with instant GPS tags
-                  </Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>📸</Text>
-                  <Text style={[styles.featureText, { color: theme.textSecondary }]}>
-                    Live camera photo verification before & after municipal cleaning
-                  </Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Text style={styles.featureIcon}>🏆</Text>
-                  <Text style={[styles.featureText, { color: theme.textSecondary }]}>
-                    Earn Swachhata Karma points & city sanitation ranks
+                <View style={styles.safetyGuaranteeRow}>
+                  <Text style={styles.safetyLockIcon}>🔒</Text>
+                  <Text style={[styles.safetyText, { color: theme.textMuted }]}>
+                    Official Google OAuth 2.0 • 256-Bit SSL Encrypted
                   </Text>
                 </View>
               </View>
             </View>
-          </View>
-
-          {/* Security Transparency Row */}
-          <TouchableOpacity
-            style={[styles.securityBadgeRow, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
-            onPress={() => setShowFirebaseInfo((prev) => !prev)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.securityBadgeIcon}>{isFirebaseConfigured() ? '🔒' : '⚙️'}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.securityBadgeTitle, { color: theme.textPrimary }]}>
-                {isFirebaseConfigured()
-                  ? 'High Security Firebase Cloud Sync Active'
-                  : 'Firebase OAuth Setup Mode'}
-              </Text>
-              <Text style={[styles.securityBadgeSub, { color: theme.textSecondary }]}>
-                {isFirebaseConfigured()
-                  ? 'Connected to nearbin-ba519 • Earth Relief India Lab'
-                  : 'Tap to view cloud setup details'}
-              </Text>
-            </View>
-            <Text style={{ color: theme.primary, fontWeight: '800' }}>{showFirebaseInfo ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-
-          {showFirebaseInfo && (
-            <View style={[styles.firebaseDetailsBox, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
-              <Text style={[styles.fbDetailTitle, { color: theme.primary }]}>Cloud Account Architecture</Text>
-              <Text style={[styles.fbDetailText, { color: theme.textSecondary }]}>
-                • Google Auth Provider: <Text style={{ fontWeight: '700' }}>nearbin-ba519.firebaseapp.com</Text>
-              </Text>
-              <Text style={[styles.fbDetailText, { color: theme.textSecondary }]}>
-                • Primary Owner: <Text style={{ fontWeight: '700' }}>earthrelief.india@gmail.com</Text>
-              </Text>
-              <Text style={[styles.fbDetailText, { color: theme.textSecondary }]}>
-                • Domain Integration: <Text style={{ fontWeight: '700' }}>nearbin.agriheal.in</Text>
-              </Text>
-            </View>
-          )}
-
-          {/* Footer Terms */}
-          <View style={styles.footerNote}>
-            <Text style={[styles.footerText, { color: theme.textMuted }]}>
-              By signing in, you support the civic movement for cleaner Indian streets and transparent municipal waste tracking.
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  modalBackdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  modalContentWrapper: {
+    width: '100%',
+    maxWidth: 480,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  closeBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
   },
   brandContainer: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 20,
   },
   logoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   logoIcon: {
-    fontSize: 36,
+    fontSize: 34,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
     letterSpacing: -0.5,
   },
   appTagline: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 4,
     fontWeight: '500',
   },
@@ -221,14 +208,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    marginTop: 14,
+    marginTop: 10,
     gap: 8,
   },
   pledgeEmoji: {
-    fontSize: 16,
+    fontSize: 15,
   },
   pledgeText: {
     fontSize: 11,
@@ -236,13 +223,14 @@ const styles = StyleSheet.create({
   },
   authCard: {
     borderRadius: 24,
-    borderWidth: 1,
-    padding: 24,
+    borderWidth: 1.5,
+    padding: 22,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 12,
+    position: 'relative',
   },
   formContainer: {
     gap: 16,
@@ -287,6 +275,19 @@ const styles = StyleSheet.create({
   googleButtonText: {
     fontSize: 16,
     fontWeight: '800',
+  },
+  exploreBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  exploreBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   safetyGuaranteeRow: {
     flexDirection: 'row',

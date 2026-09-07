@@ -55,6 +55,7 @@ export default function MenuScreen({
   onLogout,
   onReplayTutorial,
   onOpenInstall,
+  onRequireAuth,
 }) {
   const [activeSubScreen, setActiveSubScreen] = useState(null); // 'worker' | 'scrap' | 'about' | null
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -169,14 +170,24 @@ export default function MenuScreen({
               </Text>
               <Text style={[styles.userBadge, { color: theme.primary }]}>⭐ Swachhata Champion</Text>
             </View>
-            {/* Edit Profile Button */}
-            <TouchableOpacity
-              style={[styles.editProfileBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
-              onPress={handleOpenEdit}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.editProfileBtnText, { color: theme.primary }]}>✏️ Edit</Text>
-            </TouchableOpacity>
+            {/* Edit Profile Button or Sign In Button */}
+            {user ? (
+              <TouchableOpacity
+                style={[styles.editProfileBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+                onPress={handleOpenEdit}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.editProfileBtnText, { color: theme.primary }]}>✏️ Edit</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[styles.editProfileBtn, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+                onPress={onRequireAuth}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.editProfileBtnText, { color: theme.primary, fontWeight: '800' }]}>🔑 Sign In</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* User Contact & Auth method badge */}
@@ -185,7 +196,7 @@ export default function MenuScreen({
               {user?.email ? 'Account:' : 'Contact / ID:'}
             </Text>
             <Text style={[styles.contactValue, { color: theme.textPrimary }]} numberOfLines={1}>
-              {user?.email || displayPhone}
+              {user?.email || (user ? displayPhone : 'Guest (Click Sign In above)')}
             </Text>
             <View
               style={[
@@ -194,7 +205,7 @@ export default function MenuScreen({
               ]}
             >
               <Text style={[styles.authProviderText, { color: isGoogleUser ? '#4285F4' : theme.primary }]}>
-                {isGoogleUser ? '🌐 Google Verified' : '📱 Phone OTP'}
+                {isGoogleUser ? '🌐 Google Verified' : (user ? '📱 Phone OTP' : '👤 Guest')}
               </Text>
             </View>
           </View>
@@ -391,18 +402,33 @@ export default function MenuScreen({
 
         {/* Account & Session Management */}
         <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>ACCOUNT & SESSION</Text>
-        <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}
-          onPress={handleConfirmLogout}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.logoutIcon}>🚪</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.logoutText, { color: theme.critical }]}>Sign Out / Switch Account</Text>
-            <Text style={[styles.logoutSub, { color: theme.textMuted }]}>Clear saved session on this device</Text>
-          </View>
-          <Text style={[styles.logoutArrow, { color: theme.critical }]}>➔</Text>
-        </TouchableOpacity>
+        {user ? (
+          <TouchableOpacity
+            style={[styles.logoutBtn, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}
+            onPress={handleConfirmLogout}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.logoutIcon}>🚪</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.logoutText, { color: theme.critical }]}>Sign Out / Switch Account</Text>
+              <Text style={[styles.logoutSub, { color: theme.textMuted }]}>Clear saved session on this device</Text>
+            </View>
+            <Text style={[styles.logoutArrow, { color: theme.critical }]}>➔</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.logoutBtn, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+            onPress={onRequireAuth}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.logoutIcon}>🔑</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.logoutText, { color: theme.primary, fontWeight: '800' }]}>Sign In with Google Account</Text>
+              <Text style={[styles.logoutSub, { color: theme.textSecondary }]}>One-tap secure access to sync reports & karma</Text>
+            </View>
+            <Text style={[styles.logoutArrow, { color: theme.primary }]}>➔</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: 30 }} />
       </ScrollView>

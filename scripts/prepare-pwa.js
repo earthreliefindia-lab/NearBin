@@ -48,11 +48,28 @@ if (fs.existsSync(expoJsDir)) {
 }
 
 // 3. Flat icons in root (avoids subfolder 404s on Hostinger)
-const iconSource = path.join(rootDir, 'assets', 'icon.png');
-if (fs.existsSync(iconSource)) {
-  fs.copyFileSync(iconSource, path.join(distDir, 'icon-192.png'));
-  fs.copyFileSync(iconSource, path.join(distDir, 'icon-512.png'));
-  console.log('[PWA Build] Copied flat icons to dist/icon-192.png and dist/icon-512.png');
+const icon192Src = path.join(publicDir, 'icon-192.png');
+const icon512Src = path.join(publicDir, 'icon-512.png');
+const faviconSrc = path.join(publicDir, 'favicon.ico');
+
+if (fs.existsSync(icon192Src)) {
+  fs.copyFileSync(icon192Src, path.join(distDir, 'icon-192.png'));
+  const distAssets = path.join(distDir, 'assets');
+  if (!fs.existsSync(distAssets)) fs.mkdirSync(distAssets, { recursive: true });
+  fs.copyFileSync(icon192Src, path.join(distAssets, 'icon-192.png'));
+  console.log('[PWA Build] Verified & copied 192x192 icon to dist/icon-192.png and dist/assets/icon-192.png');
+}
+
+if (fs.existsSync(icon512Src)) {
+  fs.copyFileSync(icon512Src, path.join(distDir, 'icon-512.png'));
+  const distAssets = path.join(distDir, 'assets');
+  if (!fs.existsSync(distAssets)) fs.mkdirSync(distAssets, { recursive: true });
+  fs.copyFileSync(icon512Src, path.join(distAssets, 'icon-512.png'));
+  console.log('[PWA Build] Verified & copied 512x512 icon to dist/icon-512.png and dist/assets/icon-512.png');
+}
+
+if (fs.existsSync(faviconSrc)) {
+  fs.copyFileSync(faviconSrc, path.join(distDir, 'favicon.ico'));
 }
 
 // 4. Copy APK into dist if available
@@ -78,19 +95,31 @@ if (fs.existsSync(manifestPath)) {
     categories: ["utilities", "lifestyle", "productivity"],
     icons: [
       {
-        src: "./icon-192.png",
+        src: "icon-192.png",
         sizes: "192x192",
         type: "image/png",
-        purpose: "any maskable"
+        purpose: "any"
       },
       {
-        src: "./icon-512.png",
+        src: "icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable"
+      },
+      {
+        src: "icon-512.png",
         sizes: "512x512",
         type: "image/png",
-        purpose: "any maskable"
+        purpose: "any"
       },
       {
-        src: "./favicon.ico",
+        src: "icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable"
+      },
+      {
+        src: "favicon.ico",
         sizes: "64x64 32x32 24x24 16x16",
         type: "image/x-icon"
       }

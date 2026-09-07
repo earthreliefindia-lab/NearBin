@@ -101,23 +101,14 @@ export default function App() {
         }
       } catch (e) {}
 
-      // 1. First-Time Skippable Tutorial Check
-      try {
-        const tutorialSeen = await AsyncStorage.getItem('@nearbin_tutorial_seen');
-        if (!tutorialSeen) {
-          setTutorialVisible(true);
-        }
-      } catch (e) {}
-
-
-      // 2. Session check & instant server sync
+      // 1. Session check & non-blocking auth initialization
       try {
         const saved = await AsyncStorage.getItem('@nearbin_user');
         if (saved) {
           const localUser = JSON.parse(saved);
           setUser(localUser);
 
-          // Instantly sync latest profile from server
+          // Instantly sync latest profile from server if configured
           if (localUser && localUser.id) {
             WasteService.getProfile(localUser.id).then((freshUser) => {
               if (freshUser) {
@@ -127,10 +118,15 @@ export default function App() {
             });
           }
         } else {
-          setAuthModalVisible(true);
+          // Allow web view & map to fully render and display first, then gently pop up Google Sign-in overlay
+          setTimeout(() => {
+            setAuthModalVisible(true);
+          }, 800);
         }
       } catch (e) {
-        setAuthModalVisible(true);
+        setTimeout(() => {
+          setAuthModalVisible(true);
+        }, 800);
       }
 
       // 2. Data load
@@ -367,7 +363,7 @@ export default function App() {
                 </Text>
               </TouchableOpacity>
 
-              {user && (
+              {user ? (
                 <TouchableOpacity
                   style={[styles.desktopUserChip, { backgroundColor: activeColors.surfaceVariant, borderColor: activeColors.border }]}
                   onPress={() => setCurrentTab('menu')}
@@ -386,6 +382,17 @@ export default function App() {
                   )}
                   <Text style={[styles.desktopUserName, { color: activeColors.textPrimary }]} numberOfLines={1}>
                     {user.name || 'Citizen'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.desktopActionPill, { backgroundColor: activeColors.surfaceVariant, borderColor: activeColors.border }]}
+                  onPress={() => setAuthModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 14 }}>🔑</Text>
+                  <Text style={[styles.desktopActionText, { color: activeColors.textPrimary }]}>
+                    Sign In
                   </Text>
                 </TouchableOpacity>
               )}
@@ -409,6 +416,8 @@ export default function App() {
               isDesktop={isDesktop}
               onToggleTheme={handleToggleTheme}
               onOpenInstall={() => setInstallModalVisible(true)}
+              user={user}
+              onRequireAuth={() => setAuthModalVisible(true)}
             />
           )}
 
@@ -440,6 +449,7 @@ export default function App() {
                 onLogout={handleLogout}
                 onReplayTutorial={() => setTutorialVisible(true)}
                 onOpenInstall={() => setInstallModalVisible(true)}
+                onRequireAuth={() => setAuthModalVisible(true)}
               />
             </View>
           )}
@@ -455,7 +465,7 @@ export default function App() {
                   key={tab.id}
                   style={styles.navItem}
                   onPress={() => setCurrentTab(tab.id)}
-                  activeOpacity={0.75}
+                  activeOpacity={0.8}
                 >
                   <View
                     style={[
@@ -480,21 +490,20 @@ export default function App() {
           </View>
         )}
 
-        {/* Skippable First-Time Onboarding Walkthrough */}
+        {/* Optional Tutorial Walkthrough (Triggered from Menu) */}
         <OnboardingModal
           visible={tutorialVisible}
           onFinish={() => setTutorialVisible(false)}
           isDark={isDark}
         />
 
-        {/* Mandatory Authentication Gate Modal (Google Sign-In / Phone OTP) */}
-        {!tutorialVisible && (
-          <AuthModal
-            visible={authModalVisible || !user}
-            onLoginSuccess={handleLoginSuccess}
-            isDark={isDark}
-          />
-        )}
+        {/* Floating Google Sign-In Overlay (Non-blocking: dismissed via close or skip) */}
+        <AuthModal
+          visible={authModalVisible}
+          onLoginSuccess={handleLoginSuccess}
+          onClose={() => setAuthModalVisible(false)}
+          isDark={isDark}
+        />
 
         {/* Universal Smart Install Popup (PWA, Android APK, iOS) */}
         <SmartInstallModal

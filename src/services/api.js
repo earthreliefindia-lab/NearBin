@@ -2,7 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INITIAL_HOTSPOTS } from '../data/mockData';
 
 const STORAGE_KEY = '@nearbin_hotspots_v2';
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://nearbin-api.onrender.com/api';
+const RAW_API_URL = process.env.EXPO_PUBLIC_API_URL || '';
+// Inactive default render endpoint causes net::ERR_FAILED console errors and delays. Only use if valid external host.
+const API_BASE = (RAW_API_URL && !RAW_API_URL.includes('nearbin-api.onrender.com')) ? RAW_API_URL : null;
 
 // Helper: Haversine distance in meters
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -49,27 +51,29 @@ async function saveStoredHotspots(data) {
 export const WasteService = {
   // Fetch hotspots with filter & distance
   async getHotspots(params = {}) {
-    // 1. Try fetching from remote/local server if reachable
-    try {
-      const query = new URLSearchParams();
-      if (params.category && params.category !== 'all') query.append('category', params.category);
-      if (params.status && params.status !== 'all') query.append('status', params.status);
-      if (params.recyclablesOnly) query.append('recyclablesOnly', 'true');
-      if (params.lat && params.lng) {
-        query.append('lat', params.lat);
-        query.append('lng', params.lng);
-      }
-
-      const res = await fetch(`${API_BASE}/hotspots?${query.toString()}`, { signal: AbortSignal.timeout(2000) });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.hotspots && data.hotspots.length > 0) {
-          await saveStoredHotspots(data.hotspots);
-          return data.hotspots;
+    // 1. Try fetching from remote/local server if reachable and configured
+    if (API_BASE) {
+      try {
+        const query = new URLSearchParams();
+        if (params.category && params.category !== 'all') query.append('category', params.category);
+        if (params.status && params.status !== 'all') query.append('status', params.status);
+        if (params.recyclablesOnly) query.append('recyclablesOnly', 'true');
+        if (params.lat && params.lng) {
+          query.append('lat', params.lat);
+          query.append('lng', params.lng);
         }
+
+        const res = await fetch(`${API_BASE}/hotspots?${query.toString()}`, { signal: AbortSignal.timeout(1500) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hotspots && data.hotspots.length > 0) {
+            await saveStoredHotspots(data.hotspots);
+            return data.hotspots;
+          }
+        }
+      } catch (e) {
+        // Server unreachable, fallback to local storage
       }
-    } catch (e) {
-      // Server unreachable, fallback to local storage
     }
 
     // 2. Local persistent storage fallback
@@ -129,7 +133,9 @@ export const WasteService = {
       await saveStoredHotspots(list);
 
       // Async background server sync
-      fetch(`${API_BASE}/reports/${existing.id}/upvote`, { method: 'POST' }).catch(() => {});
+      if (API_BASE) {
+        fetch(`${API_BASE}/reports/${existing.id}/upvote`, { method: 'POST' }).catch(() => {});
+      }
 
       return {
         success: true,
@@ -172,11 +178,13 @@ export const WasteService = {
     await saveStoredHotspots(updated);
 
     // Background server sync
-    fetch(`${API_BASE}/reports`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(created)
-    }).catch(() => {});
+    if (API_BASE) {
+      fetch(`${API_BASE}/reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(created)
+      }).catch(() => {});
+    }
 
     return {
       success: true,
@@ -196,7 +204,9 @@ export const WasteService = {
       else if (item.upvotes >= 8) item.urgency = 'high';
       await saveStoredHotspots(list);
 
-      fetch(`${API_BASE}/reports/${id}/upvote`, { method: 'POST' }).catch(() => {});
+      if (API_BASE) {
+        fetch(`${API_BASE}/reports/${id}/upvote`, { method: 'POST' }).catch(() => {});
+      }
       return { success: true, hotspot: item };
     }
     return { success: false };
@@ -218,11 +228,13 @@ export const WasteService = {
       }
       await saveStoredHotspots(list);
 
-      fetch(`${API_BASE}/reports/${id}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, cleanedBy, afterPhoto })
-      }).catch(() => {});
+      if (API_BASE) {
+        fetch(`${API_BASE}/reports/${id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, cleanedBy, afterPhoto })
+        }).catch(() => {});
+      }
 
       return { success: true, hotspot: item };
     }
@@ -237,11 +249,13 @@ export const WasteService = {
       item.claimedBy = claimedBy || 'Local Scrap Collector';
       await saveStoredHotspots(list);
 
-      fetch(`${API_BASE}/reports/${id}/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ claimedBy })
-      }).catch(() => {});
+      if (API_BASE) {
+        fetch(`${API_BASE}/reports/${id}/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ claimedBy })
+        }).catch(() => {});
+      }
 
       return { success: true, hotspot: item };
     }
@@ -273,18 +287,20 @@ export const WasteService = {
   // Save or Update User Profile on Server
   async saveProfile(userData) {
     try {
-      const res = await fetch(`${API_BASE}/user/profile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        return data.user || userData;
+      if (API_BASE && !API_BASE.includes('localhost')) {
+        const res = await fetch(`${API_BASE}/user/profile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(userData),
+          signal: AbortSignal.timeout(1200),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.user || userData;
+        }
       }
     } catch (e) {
-      console.log('Profile sync server error:', e?.message);
+      // Offline fallback: profile preserved locally
     }
     return userData;
   },
@@ -292,17 +308,19 @@ export const WasteService = {
   // Instant fetch of User Profile from Server
   async getProfile(userId) {
     try {
-      const res = await fetch(`${API_BASE}/user/profile/${userId}`, {
-        signal: AbortSignal.timeout(3000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.user) {
-          return data.user;
+      if (API_BASE && !API_BASE.includes('localhost')) {
+        const res = await fetch(`${API_BASE}/user/profile/${userId}`, {
+          signal: AbortSignal.timeout(1000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            return data.user;
+          }
         }
       }
     } catch (e) {
-      console.log('Profile fetch server error:', e?.message);
+      // Offline fallback
     }
     return null;
   },

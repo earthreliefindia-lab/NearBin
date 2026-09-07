@@ -27,6 +27,8 @@ export default function MapScreen({
   isDesktop = false,
   onToggleTheme,
   onOpenInstall,
+  user,
+  onRequireAuth,
 }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedHotspot, setSelectedHotspot] = useState(null);
@@ -36,6 +38,14 @@ export default function MapScreen({
   const [hintDismissed, setHintDismissed] = useState(false);
 
   const theme = isDark ? DarkColors : LightColors;
+
+  const handleOpenReport = () => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
+    setReportModalVisible(true);
+  };
 
   // Filter hotspots for map display
   const filteredHotspots = hotspots.filter((h) => {
@@ -149,7 +159,7 @@ export default function MapScreen({
           <View style={[styles.sidebarFooter, { borderTopColor: theme.border, backgroundColor: theme.surface }]}>
             <TouchableOpacity
               style={[styles.desktopReportBtn, { backgroundColor: theme.primary }]}
-              onPress={() => setReportModalVisible(true)}
+              onPress={handleOpenReport}
               activeOpacity={0.85}
             >
               <Text style={[styles.desktopReportBtnText, { color: theme.textInverse }]}>
@@ -184,6 +194,15 @@ export default function MapScreen({
 
             {/* Mobile Header Quick Actions */}
             <View style={styles.mobileHeaderActions}>
+              {!user && (
+                <TouchableOpacity
+                  style={[styles.mobileLoginBtn, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+                  onPress={onRequireAuth}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.mobileLoginText, { color: theme.primary }]}>🔑 Sign In</Text>
+                </TouchableOpacity>
+              )}
               {onToggleTheme && (
                 <TouchableOpacity
                   style={[styles.mobileHeaderBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
@@ -332,7 +351,7 @@ export default function MapScreen({
       {!isDesktop && (
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: theme.primary }]}
-          onPress={() => setReportModalVisible(true)}
+          onPress={handleOpenReport}
           activeOpacity={0.85}
         >
           <Text style={styles.fabIcon}>📸</Text>
@@ -356,6 +375,10 @@ export default function MapScreen({
         onClose={() => setSelectedHotspot(null)}
         currentRole={currentRole}
         onUpvote={async (id) => {
+          if (!user) {
+            if (onRequireAuth) onRequireAuth();
+            return;
+          }
           await onUpvote(id);
           const updated = hotspots.find((h) => h.id === id);
           if (updated) setSelectedHotspot({ ...updated, upvotes: (updated.upvotes || 0) + 1 });
@@ -411,6 +434,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mobileLoginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  mobileLoginText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   brandLogo: {
     fontSize: 22,
