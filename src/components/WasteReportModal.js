@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, DarkColors, LightColors } from '../theme/colors';
+import { CloudStorageService } from '../services/cloudStorage';
 
 const CATEGORIES = [
   { id: 'plastic', label: 'Plastic / Packets', icon: '🥤', color: Colors.catPlastic },
@@ -87,6 +88,11 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
 
     setIsSubmitting(true);
     try {
+      // 1. Compress & Offload photo to Cloud CDN (Zero host server disk usage)
+      const cloudPhotoUrl = await CloudStorageService.uploadImage(photoUri, {
+        folder: 'nearbin/citizen-reports',
+      });
+
       const primaryCat = selectedCategories[0] || 'plastic';
       await onSubmit({
         title: title || `${primaryCat.toUpperCase()} Waste Reported`,
@@ -96,7 +102,7 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
         latitude: userLocation?.latitude || 28.5672,
         longitude: userLocation?.longitude || 77.2435,
         address: 'Current Street Location (Mappls GPS verified)',
-        beforePhoto: photoUri,
+        beforePhoto: cloudPhotoUrl || photoUri,
       });
 
       // Reset

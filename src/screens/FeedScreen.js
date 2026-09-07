@@ -10,6 +10,7 @@ export default function FeedScreen({
   onClaimRecyclables,
   currentRole,
   isDark = true,
+  onOpenReport,
 }) {
   const [selectedHotspot, setSelectedHotspot] = useState(null);
   const theme = isDark ? DarkColors : LightColors;
@@ -100,13 +101,65 @@ export default function FeedScreen({
         </Text>
       </View>
 
-      <FlatList
-        data={hotspots}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      {hotspots && hotspots.length > 0 ? (
+        <FlatList
+          data={hotspots}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <View style={styles.emptyContainer}>
+          <View style={[styles.emptyCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+            <View style={[styles.emptyIconCircle, { backgroundColor: theme.primaryContainer }]}>
+              <Text style={styles.emptyIcon}>🌱</Text>
+            </View>
+            <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>
+              100% Clean Neighborhood!
+            </Text>
+            <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
+              No active garbage dumps reported in your area yet. As soon as you or a neighbor spots and geotags an uncleaned spot, it will appear here in real-time.
+            </Text>
+
+            {/* Quick Guidance Card */}
+            <View style={[styles.guidanceBox, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+              <Text style={[styles.guidanceHeading, { color: theme.textPrimary }]}>HOW TO SUBMIT FIRST REPORT</Text>
+              <View style={styles.guidanceRow}>
+                <Text style={styles.guidanceEmoji}>1️⃣</Text>
+                <Text style={[styles.guidanceText, { color: theme.textSecondary }]}>
+                  Snap an unedited photo of plastic, scrap, or wet garbage.
+                </Text>
+              </View>
+              <View style={styles.guidanceRow}>
+                <Text style={styles.guidanceEmoji}>2️⃣</Text>
+                <Text style={[styles.guidanceText, { color: theme.textSecondary }]}>
+                  Mappls GPS instantly verifies the exact street coordinates.
+                </Text>
+              </View>
+              <View style={styles.guidanceRow}>
+                <Text style={styles.guidanceEmoji}>3️⃣</Text>
+                <Text style={[styles.guidanceText, { color: theme.textSecondary }]}>
+                  Neighbors upvote to boost urgency, and municipal Safai Mitras clean with photo proof!
+                </Text>
+              </View>
+            </View>
+
+            {onOpenReport && (
+              <TouchableOpacity
+                style={[styles.reportPromptBtn, { backgroundColor: theme.primary }]}
+                onPress={onOpenReport}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.reportPromptText, { color: theme.textInverse }]}>
+                  📸 Snap & Report Waste Spot
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
 
       <HotspotDetailCard
         hotspot={selectedHotspot}
@@ -213,4 +266,87 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
+  emptyContainer: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyCard: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  emptyIconCircle: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyIcon: {
+    fontSize: 34,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptySub: {
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  guidanceBox: {
+    width: '100%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+    gap: 10,
+  },
+  guidanceHeading: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  guidanceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  guidanceEmoji: {
+    fontSize: 15,
+    marginTop: 1,
+  },
+  guidanceText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '500',
+  },
+  reportPromptBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reportPromptText: {
+    fontSize: 14,
+    fontWeight: '900',
+  },
 });
+

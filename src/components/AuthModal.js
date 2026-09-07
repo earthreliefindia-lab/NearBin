@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkColors, LightColors } from '../theme/colors';
+import { FirebaseAuthService, isFirebaseConfigured } from '../services/firebaseAuth';
 
 export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
   const [authMethod, setAuthMethod] = useState('phone'); // 'phone' | 'google'
@@ -21,7 +22,10 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
   const [otpStep, setOtpStep] = useState(false); // false: enter phone, true: enter OTP
   const [otpCode, setOtpCode] = useState('');
   const [demoOtp, setDemoOtp] = useState('428190');
+  const [isSimulated, setIsSimulated] = useState(!isFirebaseConfigured());
+  const [confirmationResult, setConfirmationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFirebaseInfo, setShowFirebaseInfo] = useState(false);
 
   const theme = isDark ? DarkColors : LightColors;
 
@@ -29,27 +33,16 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      setTimeout(async () => {
-        const googleUser = {
-          id: 'usr_g_' + Date.now().toString().slice(-6),
-          name: 'Keshaw Sharma',
-          email: 'keshaw.sharma@earthrelief.org',
-          phone: '+91 98765 43210',
-          authProvider: 'google',
-          ward: 'South Delhi Ward 14 - Malviya Nagar',
-          avatar: '🇮🇳',
-          role: 'citizen',
-          karma: 480,
-          verifiedReports: 14,
-          joinedAt: new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
-        };
-
-        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(googleUser));
-        setIsLoading(false);
+      const res = await FirebaseAuthService.signInWithGoogle();
+      setIsLoading(false);
+      if (res.success && res.user) {
+        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(res.user));
         if (onLoginSuccess) {
-          onLoginSuccess(googleUser);
+          onLoginSuccess(res.user);
         }
-      }, 700);
+      } else {
+        Alert.alert('Sign-In Error', res.error || 'Unable to authenticate with Google.');
+      }
     } catch (e) {
       setIsLoading(false);
       Alert.alert('Sign-In Error', 'Unable to authenticate with Google. Please try phone OTP.');
@@ -57,7 +50,7 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
   };
 
   // Step 1: Send OTP
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     const cleaned = phoneNumber.replace(/[^0-9]/g, '');
     if (cleaned.length < 10) {
       Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit Indian mobile number.');
@@ -65,13 +58,26 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      const generated = Math.floor(100000 + Math.random() * 900000).toString();
-      setDemoOtp(generated);
-      setOtpStep(true);
-      setOtpCode(generated); // Pre-fill for instant convenience while still showing OTP UI
+    try {
+      const res = await FirebaseAuthService.sendPhoneOtp(cleaned, 'recaptcha-container');
       setIsLoading(false);
-    }, 600);
+      if (res.success) {
+        setIsSimulated(Boolean(res.isSimulated));
+        if (res.isSimulated) {
+          setDemoOtp(res.demoCode);
+          setOtpCode(res.demoCode);
+        } else {
+          setConfirmationResult(res.confirmationResult);
+          setOtpCode('');
+        }
+        setOtpStep(true);
+      } else {
+        Alert.alert('OTP Error', res.error || 'Failed to dispatch SMS OTP.');
+      }
+    } catch (err) {
+      setIsLoading(false);
+      Alert.alert('OTP Dispatch Error', err.message || 'Error triggering SMS.');
+    }
   };
 
   // Step 2: Verify OTP
@@ -83,33 +89,22 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
 
     setIsLoading(true);
     try {
-      setTimeout(async () => {
-        const cleaned = phoneNumber.replace(/[^0-9]/g, '');
-        const phoneUser = {
-          id: 'usr_p_' + cleaned.slice(-4),
-          name: 'Citizen ' + cleaned.slice(-4),
-          phone: '+91 ' + cleaned,
-          email: `citizen.${cleaned.slice(-4)}@nearbin.in`,
-          authProvider: 'phone',
-          ward: 'Municipal Zone 5 - Green Park Ward',
-          avatar: '🇮🇳',
-          role: 'citizen',
-          karma: 150,
-          verifiedReports: 3,
-          joinedAt: new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
-        };
-
-        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(phoneUser));
-        setIsLoading(false);
+      const res = await FirebaseAuthService.verifyPhoneOtp(confirmationResult, otpCode, phoneNumber);
+      setIsLoading(false);
+      if (res.success && res.user) {
+        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(res.user));
         if (onLoginSuccess) {
-          onLoginSuccess(phoneUser);
+          onLoginSuccess(res.user);
         }
-      }, 600);
+      } else {
+        Alert.alert('Verification Error', res.error || 'Could not verify OTP. Please try again.');
+      }
     } catch (e) {
       setIsLoading(false);
       Alert.alert('Verification Error', 'Could not verify OTP. Please try again.');
     }
   };
+
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
@@ -235,12 +230,19 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
                       </TouchableOpacity>
                     </View>
 
-                    {/* Quick Demo OTP Hint Badge */}
-                    <View style={[styles.demoOtpBadge, { backgroundColor: 'rgba(0, 230, 118, 0.12)', borderColor: theme.primary }]}>
-                      <Text style={[styles.demoOtpText, { color: theme.primary }]}>
-                        ⚡ Verification Code Generated: <Text style={{ fontWeight: '900' }}>{demoOtp}</Text>
-                      </Text>
-                    </View>
+                    {isSimulated ? (
+                      <View style={[styles.demoOtpBadge, { backgroundColor: 'rgba(0, 230, 118, 0.12)', borderColor: theme.primary }]}>
+                        <Text style={[styles.demoOtpText, { color: theme.primary }]}>
+                          ⚡ Quick Mode Code: <Text style={{ fontWeight: '900' }}>{demoOtp}</Text>
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.demoOtpBadge, { backgroundColor: 'rgba(0, 176, 255, 0.12)', borderColor: theme.secondary }]}>
+                        <Text style={[styles.demoOtpText, { color: theme.secondary }]}>
+                          📩 SMS Sent via Firebase: Enter the 6-digit code received on your phone
+                        </Text>
+                      </View>
+                    )}
 
                     <TextInput
                       style={[styles.otpInput, { backgroundColor: theme.surfaceVariant, borderColor: theme.primary, color: theme.textPrimary }]}
@@ -317,6 +319,51 @@ export default function AuthModal({ visible, onLoginSuccess, isDark = true }) {
               </View>
             )}
           </View>
+
+          {/* Invisible reCAPTCHA container for Firebase Phone Auth */}
+          {Platform.OS === 'web' && (
+            <View nativeID="recaptcha-container" style={{ height: 0, overflow: 'hidden' }} />
+          )}
+
+          {/* Security & Free Setup Transparency Card */}
+          <TouchableOpacity
+            style={[styles.securityBadgeRow, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+            onPress={() => setShowFirebaseInfo((prev) => !prev)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.securityBadgeIcon}>{isFirebaseConfigured() ? '🔒' : '⚙️'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.securityBadgeTitle, { color: theme.textPrimary }]}>
+                {isFirebaseConfigured()
+                  ? 'High Security Firebase Auth Active'
+                  : 'Free Firebase SMS & Google OAuth Mode'}
+              </Text>
+              <Text style={[styles.securityBadgeSub, { color: theme.textSecondary }]}>
+                {isFirebaseConfigured()
+                  ? '10,000 free SMS/mo via Firebase • Bot brute-force protected'
+                  : 'Tap to view free 10,000 SMS setup details (Zero Cost)'}
+              </Text>
+            </View>
+            <Text style={{ color: theme.primary, fontWeight: '800' }}>{showFirebaseInfo ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {showFirebaseInfo && (
+            <View style={[styles.firebaseDetailsBox, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+              <Text style={[styles.fbDetailTitle, { color: theme.primary }]}>Free 10,000 SMS / Month Setup</Text>
+              <Text style={[styles.fbDetailText, { color: theme.textSecondary }]}>
+                1. Create a free project at <Text style={{ fontWeight: '700' }}>console.firebase.google.com</Text>
+              </Text>
+              <Text style={[styles.fbDetailText, { color: theme.textSecondary }]}>
+                2. Under <Text style={{ fontWeight: '700' }}>Build ➔ Authentication</Text>, enable Phone and Google providers.
+              </Text>
+              <Text style={[styles.fbDetailText, { color: theme.textSecondary }]}>
+                3. Paste the API key into <Text style={{ fontWeight: '700' }}>.env</Text> as <Text style={{ fontWeight: '700' }}>EXPO_PUBLIC_FIREBASE_API_KEY</Text>.
+              </Text>
+              <Text style={[styles.fbDetailText, { color: theme.textSecondary }]}>
+                4. Firebase provides 10,000 SMS OTPs each month for +91 numbers at zero charge!
+              </Text>
+            </View>
+          )}
 
           {/* Footer Terms */}
           <View style={styles.footerNote}>
@@ -557,4 +604,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+  securityBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 18,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  securityBadgeIcon: {
+    fontSize: 18,
+  },
+  securityBadgeTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  securityBadgeSub: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  firebaseDetailsBox: {
+    marginTop: 10,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 6,
+  },
+  fbDetailTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  fbDetailText: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
 });
+

@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Platform, StatusBar } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  Platform,
+  StatusBar,
+  useColorScheme,
+  useWindowDimensions,
+} from 'react-native';
 import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,8 +25,13 @@ import OnboardingModal from './src/components/OnboardingModal';
 import SmartInstallModal from './src/components/SmartInstallModal';
 
 export default function App() {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 960;
+  const systemColorScheme = useColorScheme();
+
   const [currentTab, setCurrentTab] = useState('map'); // 'map' | 'feed' | 'menu'
-  const [isDark, setIsDark] = useState(true); // Dark / Light theme toggle
+  const [isDark, setIsDark] = useState(false); // Clean Light Theme default
+
   const [hotspots, setHotspots] = useState([]);
   const [stats, setStats] = useState(null);
   const [userLocation, setUserLocation] = useState({ latitude: 28.5672, longitude: 77.2435 });
@@ -61,9 +76,30 @@ export default function App() {
     }
   };
 
+  // Theme toggle with persistence
+  const handleToggleTheme = async () => {
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+    try {
+      await AsyncStorage.setItem('@nearbin_theme', nextDark ? 'dark' : 'light');
+    } catch (e) {}
+  };
+
   // Check saved user session & load initial data
   useEffect(() => {
     (async () => {
+      // 0. Theme initialization (Saved preference > system preference > clean Light default)
+      try {
+        const savedTheme = await AsyncStorage.getItem('@nearbin_theme');
+        if (savedTheme) {
+          setIsDark(savedTheme === 'dark');
+        } else if (systemColorScheme === 'dark') {
+          setIsDark(true);
+        } else {
+          setIsDark(false);
+        }
+      } catch (e) {}
+
       // 1. First-Time Skippable Tutorial Check
       try {
         const tutorialSeen = await AsyncStorage.getItem('@nearbin_tutorial_seen');
@@ -71,6 +107,7 @@ export default function App() {
           setTutorialVisible(true);
         }
       } catch (e) {}
+
 
       // 2. Session check & instant server sync
       try {
@@ -223,11 +260,127 @@ export default function App() {
 
   return (
     <PaperProvider theme={paperTheme}>
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: activeColors.background }]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: activeColors.background }, isDesktop && { maxWidth: '100%' }]}>
         <StatusBar
           barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor={activeColors.background}
         />
+
+        {/* DESKTOP TOP NAVIGATION BAR (>960px Viewports) */}
+        {isDesktop && (
+          <View style={[styles.desktopHeader, { backgroundColor: activeColors.surface, borderBottomColor: activeColors.border }]}>
+            <View style={styles.desktopBrandArea}>
+              <View style={[styles.desktopLogoBadge, { backgroundColor: activeColors.primaryContainer }]}>
+                <Text style={{ fontSize: 22 }}>🌱</Text>
+              </View>
+              <View>
+                <Text style={[styles.desktopBrandTitle, { color: activeColors.textPrimary }]}>
+                  Near<Text style={{ color: activeColors.primary }}>Bin</Text>
+                </Text>
+                <Text style={[styles.desktopBrandSub, { color: activeColors.textMuted }]}>
+                  Swachh Bharat Live Heatmap
+                </Text>
+              </View>
+            </View>
+
+            {/* Desktop Navigation Tabs */}
+            <View style={[styles.desktopTabContainer, { backgroundColor: activeColors.surfaceVariant, borderColor: activeColors.border }]}>
+              <TouchableOpacity
+                style={[styles.desktopTabBtn, currentTab === 'map' && [styles.desktopTabBtnActive, { backgroundColor: activeColors.surfaceCard }]]}
+                onPress={() => setCurrentTab('map')}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 15 }}>🗺️</Text>
+                <Text
+                  style={[
+                    styles.desktopTabText,
+                    { color: currentTab === 'map' ? activeColors.primary : activeColors.textSecondary },
+                    currentTab === 'map' && { fontWeight: '900' },
+                  ]}
+                >
+                  Heatmap & Actions
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.desktopTabBtn, currentTab === 'feed' && [styles.desktopTabBtnActive, { backgroundColor: activeColors.surfaceCard }]]}
+                onPress={() => setCurrentTab('feed')}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 15 }}>📋</Text>
+                <Text
+                  style={[
+                    styles.desktopTabText,
+                    { color: currentTab === 'feed' ? activeColors.primary : activeColors.textSecondary },
+                    currentTab === 'feed' && { fontWeight: '900' },
+                  ]}
+                >
+                  Nearby Feed
+                </Text>
+                {hotspots.length > 0 && (
+                  <View style={[styles.desktopBadgeCount, { backgroundColor: activeColors.primary }]}>
+                    <Text style={[styles.desktopBadgeCountText, { color: activeColors.textInverse }]}>{hotspots.length}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.desktopTabBtn, currentTab === 'menu' && [styles.desktopTabBtnActive, { backgroundColor: activeColors.surfaceCard }]]}
+                onPress={() => setCurrentTab('menu')}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 15 }}>⚙️</Text>
+                <Text
+                  style={[
+                    styles.desktopTabText,
+                    { color: currentTab === 'menu' ? activeColors.primary : activeColors.textSecondary },
+                    currentTab === 'menu' && { fontWeight: '900' },
+                  ]}
+                >
+                  Dashboard & Profile
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Desktop Action Pills (Theme, Install, User) */}
+            <View style={styles.desktopRightActions}>
+              <TouchableOpacity
+                style={[styles.desktopActionPill, { backgroundColor: activeColors.surfaceVariant, borderColor: activeColors.border }]}
+                onPress={handleToggleTheme}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 15 }}>{isDark ? '☀️' : '🌙'}</Text>
+                <Text style={[styles.desktopActionText, { color: activeColors.textPrimary }]}>
+                  {isDark ? 'Light' : 'Dark'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.desktopActionPill, { backgroundColor: activeColors.primaryContainer, borderColor: activeColors.primary }]}
+                onPress={() => setInstallModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 15 }}>📲</Text>
+                <Text style={[styles.desktopActionText, { color: activeColors.primary, fontWeight: '800' }]}>
+                  Get Mobile App
+                </Text>
+              </TouchableOpacity>
+
+              {user && (
+                <TouchableOpacity
+                  style={[styles.desktopUserChip, { backgroundColor: activeColors.surfaceVariant, borderColor: activeColors.border }]}
+                  onPress={() => setCurrentTab('menu')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 16 }}>{user.avatar || '🇮🇳'}</Text>
+                  <Text style={[styles.desktopUserName, { color: activeColors.textPrimary }]} numberOfLines={1}>
+                    {user.name || 'Citizen'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Screen Container */}
         <View style={styles.screenContainer}>
@@ -242,69 +395,77 @@ export default function App() {
               userLocation={userLocation}
               onRecenter={handleRecenter}
               isDark={isDark}
+              isDesktop={isDesktop}
             />
           )}
 
           {currentTab === 'feed' && (
-            <FeedScreen
-              hotspots={hotspots}
-              onUpvote={handleUpvote}
-              onUpdateStatus={handleUpdateStatus}
-              onClaimRecyclables={handleClaimRecyclables}
-              currentRole="citizen"
-              isDark={isDark}
-            />
+            <View style={[styles.feedTabContainer, isDesktop && styles.desktopCenteredTab]}>
+              <FeedScreen
+                hotspots={hotspots}
+                onUpvote={handleUpvote}
+                onUpdateStatus={handleUpdateStatus}
+                onClaimRecyclables={handleClaimRecyclables}
+                currentRole="citizen"
+                isDark={isDark}
+                onOpenReport={() => setCurrentTab('map')}
+              />
+            </View>
           )}
 
           {currentTab === 'menu' && (
-            <MenuScreen
-              stats={stats}
-              isDark={isDark}
-              onToggleTheme={() => setIsDark((prev) => !prev)}
-              hotspots={hotspots}
-              onUpdateStatus={handleUpdateStatus}
-              onClaimRecyclables={handleClaimRecyclables}
-              user={user}
-              onUpdateProfile={handleUpdateProfile}
-              onLogout={handleLogout}
-              onReplayTutorial={() => setTutorialVisible(true)}
-              onOpenInstall={() => setInstallModalVisible(true)}
-            />
+            <View style={[styles.menuTabContainer, isDesktop && styles.desktopCenteredTab]}>
+              <MenuScreen
+                stats={stats}
+                isDark={isDark}
+                onToggleTheme={handleToggleTheme}
+                hotspots={hotspots}
+                onUpdateStatus={handleUpdateStatus}
+                onClaimRecyclables={handleClaimRecyclables}
+                user={user}
+                onUpdateProfile={handleUpdateProfile}
+                onLogout={handleLogout}
+                onReplayTutorial={() => setTutorialVisible(true)}
+                onOpenInstall={() => setInstallModalVisible(true)}
+              />
+            </View>
           )}
         </View>
 
-        {/* Stock Android Material 3 Bottom Navigation Bar */}
-        <View style={[styles.bottomNav, { backgroundColor: activeColors.surface, borderTopColor: activeColors.border }]}>
-          {TABS.map((tab) => {
-            const isActive = currentTab === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                style={styles.navItem}
-                onPress={() => setCurrentTab(tab.id)}
-                activeOpacity={0.75}
-              >
-                <View
-                  style={[
-                    styles.navIconContainer,
-                    isActive && { backgroundColor: activeColors.primaryContainer },
-                  ]}
+        {/* Stock Android Material 3 Bottom Navigation Bar (Mobile Only) */}
+        {!isDesktop && (
+          <View style={[styles.bottomNav, { backgroundColor: activeColors.surface, borderTopColor: activeColors.border }]}>
+            {TABS.map((tab) => {
+              const isActive = currentTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={styles.navItem}
+                  onPress={() => setCurrentTab(tab.id)}
+                  activeOpacity={0.75}
                 >
-                  <Text style={styles.navIcon}>{tab.icon}</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.navLabel,
-                    { color: isActive ? activeColors.primary : activeColors.textMuted },
-                    isActive && { fontWeight: '800' },
-                  ]}
-                >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <View
+                    style={[
+                      styles.navIconContainer,
+                      isActive && { backgroundColor: activeColors.primaryContainer },
+                    ]}
+                  >
+                    <Text style={styles.navIcon}>{tab.icon}</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.navLabel,
+                      { color: isActive ? activeColors.primary : activeColors.textMuted },
+                      isActive && { fontWeight: '800' },
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {/* Skippable First-Time Onboarding Walkthrough */}
         <OnboardingModal
@@ -332,6 +493,7 @@ export default function App() {
     </PaperProvider>
   );
 }
+
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -371,4 +533,115 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 3,
   },
+  feedTabContainer: {
+    flex: 1,
+  },
+  menuTabContainer: {
+    flex: 1,
+  },
+  desktopCenteredTab: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  desktopHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    zIndex: 100,
+  },
+  desktopBrandArea: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  desktopLogoBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  desktopBrandTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+  },
+  desktopBrandSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  desktopTabContainer: {
+    flexDirection: 'row',
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 4,
+    gap: 4,
+  },
+  desktopTabBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 8,
+  },
+  desktopTabBtnActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  desktopTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  desktopBadgeCount: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 10,
+    marginLeft: 2,
+  },
+  desktopBadgeCountText: {
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  desktopRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  desktopActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 6,
+  },
+  desktopActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  desktopUserChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+    maxWidth: 160,
+  },
+  desktopUserName: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
 });
+

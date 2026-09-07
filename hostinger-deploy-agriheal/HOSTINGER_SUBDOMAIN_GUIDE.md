@@ -14,28 +14,26 @@
 
 ---
 
-### 2. Fixed: Mobile `"This site can't be reached"`
-Follow these 3 checks in Hostinger hPanel:
+### 2. Fixed: Mobile "This site can't be reached" (CRITICAL: IPv6 / AAAA DNS Record)
+- **Diagnostic Discovery**: 
+  When testing the server via live terminal:
+  - **IPv4 (`curl -4`)**: Connected successfully (HTTP 200 OK).
+  - **IPv6 (`curl -6`)**: `curl: (7) Failed to connect to nearbin.agriheal.in:443: Could not connect to server`.
+- **Root Cause**: Hostinger automatically added **AAAA (IPv6)** DNS records (`2a02:4780:...`) to `nearbin.agriheal.in`. Indian cellular networks (Jio 5G, Airtel 5G, Vi) connect via IPv6 by default. Because the IPv6 address is unresponsive, mobile phones fail with *"This site can't be reached"*.
+- **1-Minute Fix in Hostinger hPanel**:
+  1. Open Hostinger **hPanel** ➔ Go to **Domains** ➔ Select **`agriheal.in`** ➔ **DNS / Nameservers**.
+  2. In the DNS records search bar, type: **`nearbin`**.
+  3. Look for any records of type **`AAAA`**.
+  4. Click the **Delete (Trash bin)** icon to remove the `AAAA` records (keep the `A` records with IPv4 `88.222.243.94` / `93.127.173.14`).
+  5. If there is a "Purge Hostinger Cache" button under Performance / CDN, click **Purge All**.
+  6. On your mobile phone, turn Airplane mode ON and OFF. Open `https://nearbin.agriheal.in/` — it will now connect instantly!
 
-#### Check A: File Extraction Location (Most Common)
+---
+
+### 3. File Extraction & Verification in Hostinger File Manager
 In Hostinger File Manager:
-- When you extracted `nearbin-agriheal.zip`, verify that `index.html`, `.htaccess`, `static/`, and `NearBin.apk` are located **directly in your subdomain folder**, NOT inside a nested folder like `public_html/nearbin/nearbin-agriheal/` or `public_html/nearbin/public_html/`.
-- If they are inside a subfolder:
-  1. Open that subfolder.
-  2. Select all files.
-  3. Click **Move** ➔ Move them one level up into your subdomain root (`public_html/nearbin/`).
-
-#### Check B: SSL Certificate for `nearbin.agriheal.in`
-1. Go to Hostinger hPanel ➔ **Security** ➔ **SSL**.
-2. Look at the list: ensure **`nearbin.agriheal.in`** shows an **Active** green shield.
-3. If it says *Failed* or *Not Installed*:
-   - Click the 3 dots ➔ **Reinstall SSL** (free lifetime Let's Encrypt).
-   - Once it shows **Active**, toggle **Force HTTPS** ON.
-
-#### Check C: Mobile DNS Propagation
-New subdomains can take 5–15 minutes to reach mobile cellular networks (Jio / Airtel / Vi):
-- On your phone, toggle Airplane mode ON and OFF (or switch from mobile data to Wi-Fi).
-- Test opening `http://nearbin.agriheal.in` and `https://nearbin.agriheal.in`.
+- When you extract `nearbin-agriheal.zip`, verify that `index.html`, `bundle.js`, `.htaccess`, and `NearBin.apk` are located **directly in your subdomain root folder** (e.g. `domains/agriheal.in/public_html/nearbin/`), NOT inside a nested subfolder.
+- Ensure SSL certificate shows **Active** (green shield) for `nearbin.agriheal.in` under Security ➔ SSL.
 
 ---
 
