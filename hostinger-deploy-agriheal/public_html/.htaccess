@@ -1,4 +1,4 @@
-# NearBin Root Subdomain Configuration for Hostinger (nearbin.agriheal.in)
+# NearBin Subdomain Configuration for Hostinger (nearbin.agriheal.in)
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
@@ -7,26 +7,32 @@
   RewriteCond %{HTTPS} !=on
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # 2. Never rewrite physical files or directories
+  # 2. Directly serve physical files and directories
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 3. Fallback all routes to index.html for Single Page Application (SPA)
+  # 3. DO NOT rewrite static assets (JS, CSS, Images, Fonts, APK) to index.html
+  # This prevents MIME type ('text/html') errors on script loading
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|json|apk)$ [NC]
+  RewriteRule ^ - [L]
+
+  # 4. Fallback only virtual SPA navigation routes to index.html
   RewriteRule ^ index.html [L]
 </IfModule>
 
-# MIME Types for Progressive Web Apps (PWA)
+# Strict MIME Types Configuration for JavaScript and Web Assets
 <IfModule mod_mime.c>
-  AddType application/manifest+json .json .webmanifest
   AddType application/javascript .js
+  AddType text/javascript .js
+  AddType application/manifest+json .json .webmanifest
   AddType image/svg+xml .svg
   AddType image/webp .webp
   AddType font/woff2 .woff2
   AddType application/vnd.android.package-archive .apk
 </IfModule>
 
-# Browser Caching for Instant 60FPS Loading
+# Browser Caching
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresDefault "access plus 1 month"
@@ -35,11 +41,12 @@
   ExpiresByType application/manifest+json "access plus 0 seconds"
   ExpiresByType text/cache-manifest "access plus 0 seconds"
   
-  # HTML: Cache for 1 hour
-  ExpiresByType text/html "access plus 1 hour"
+  # HTML: Cache for 10 minutes
+  ExpiresByType text/html "access plus 10 minutes"
 
   # Static Assets (JS, CSS, Images, Fonts, APK): Cache for 1 year
   ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
   ExpiresByType text/css "access plus 1 year"
   ExpiresByType image/png "access plus 1 year"
   ExpiresByType image/jpeg "access plus 1 year"
@@ -49,12 +56,10 @@
 
 # Gzip / Brotli Compression
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json application/manifest+json image/svg+xml
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript text/javascript application/json application/manifest+json image/svg+xml
 </IfModule>
 
-# Security Headers
+# Cross-Origin Resource Sharing (CORS)
 <IfModule mod_headers.c>
-  Header set X-Content-Type-Options "nosniff"
-  Header set X-Frame-Options "SAMEORIGIN"
-  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Access-Control-Allow-Origin "*"
 </IfModule>

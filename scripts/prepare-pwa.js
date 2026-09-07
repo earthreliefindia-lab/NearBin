@@ -23,7 +23,33 @@ function copyRecursiveSync(src, dest) {
 
 copyRecursiveSync(publicDir, distDir);
 
-// 2. Enhance dist/index.html with PWA tags and relative path handling
+// 2. Create clean static/js/bundle.js without leading underscores (avoids Apache/LiteSpeed _expo blocking)
+const expoJsDir = path.join(distDir, '_expo', 'static', 'js', 'web');
+const staticJsDir = path.join(distDir, 'static', 'js');
+let bundleFileName = '';
+
+if (fs.existsSync(expoJsDir)) {
+  const files = fs.readdirSync(expoJsDir).filter(f => f.endsWith('.js'));
+  if (files.length > 0) {
+    bundleFileName = files[0];
+    if (!fs.existsSync(staticJsDir)) fs.mkdirSync(staticJsDir, { recursive: true });
+    
+    // Copy to static/js/bundle.js
+    const sourceBundle = path.join(expoJsDir, bundleFileName);
+    const destBundle = path.join(staticJsDir, 'bundle.js');
+    fs.copyFileSync(sourceBundle, destBundle);
+    console.log(`[PWA Build] Copied ${bundleFileName} -> static/js/bundle.js (clean non-underscore path)`);
+  }
+}
+
+// 3. Copy APK into dist if available
+const apkSource = path.join(rootDir, 'release', 'NearBin.apk');
+if (fs.existsSync(apkSource)) {
+  fs.copyFileSync(apkSource, path.join(distDir, 'NearBin.apk'));
+  console.log('[PWA Build] Copied NearBin.apk to dist/NearBin.apk');
+}
+
+// 4. Enhance dist/index.html with PWA tags and failsafe script tags
 const indexPath = path.join(distDir, 'index.html');
 if (fs.existsSync(indexPath)) {
   let html = fs.readFileSync(indexPath, 'utf8');
@@ -45,12 +71,13 @@ if (fs.existsSync(indexPath)) {
     html = html.replace('</head>', `${pwaTags}</head>`);
   }
 
-  // Support relative path for sub-directory deployment (e.g. earthrelief.in/nearbin/)
-  html = html.replace(/src="\/_expo\//g, 'src="./_expo/');
-  html = html.replace(/href="\/favicon\.ico"/g, 'href="./favicon.ico"');
+  // Replace script with clean static/js/bundle.js with fallback to _expo
+  const newScriptTag = `<script src="static/js/bundle.js" onerror="this.onerror=null;this.src='_expo/static/js/web/${bundleFileName}';" defer></script>`;
+  html = html.replace(/<script src="[^"]*" defer><\/script>/, newScriptTag);
+  html = html.replace(/href="\/favicon\.ico"/g, 'href="favicon.ico"');
 
   fs.writeFileSync(indexPath, html, 'utf8');
-  console.log('[PWA Build] Enhanced dist/index.html with PWA tags and relative paths.');
+  console.log('[PWA Build] Enhanced dist/index.html with clean script paths.');
 }
 
 console.log('[PWA Build] Complete! dist/ is 100% PWA and self-hosting ready.');

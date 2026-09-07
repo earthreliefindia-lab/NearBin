@@ -1,75 +1,59 @@
-# 🌐 Hostinger Subdomain Setup Guide: `https://nearbin.agriheal.in`
-
-Complete step-by-step instructions to host and launch **NearBin** on your subdomain **`nearbin.agriheal.in`** with full web functionality, instant PWA installation on Android/iOS, and direct APK download.
-
----
-
-## 📦 What Is Inside This Package (`hostinger-deploy-agriheal/`)
-
-- **`nearbin-agriheal.zip`** (3.95 MB): **1-Click Upload Archive** containing:
-  - `index.html` (Fast React Native Web Dashboard & Heatmap)
-  - `manifest.json` (Configured for root subdomain `https://nearbin.agriheal.in/`)
-  - `sw.js` (Universal Service Worker for offline caching & instant 60 FPS loading)
-  - `NearBin.apk` (4.39 MB standalone Android APK)
-  - `.htaccess` (LiteSpeed / Apache configuration with HTTPS redirect and SPA routing)
-  - `assets/` & `_expo/` (Icons & compiled scripts)
+# 🌐 Hostinger Subdomain Deployment & Troubleshooting Guide
+### Domain: `https://nearbin.agriheal.in`
 
 ---
 
-## 🚀 3-Minute Deployment Instructions on Hostinger hPanel
+## ⚡ Resolution for the Two Errors Encountered
 
-### Step 1: Verify / Create the Subdomain in Hostinger
-1. Log in to your **[Hostinger hPanel](https://hpanel.hostinger.com/)**.
-2. Go to **Websites** ➔ Find **`agriheal.in`** ➔ Click **Manage**.
-3. In the left sidebar, click **Domains** ➔ **Subdomains**.
-4. If not created yet:
-   - Enter **`nearbin`** in the subdomain field.
-   - Leave the directory path as default (typically `public_html/nearbin` or `domains/agriheal.in/public_html/nearbin`).
-   - Click **Create**.
+### 1. Fixed: `Refused to execute script ... MIME type ('text/html') is not executable`
+- **Cause**: Apache/LiteSpeed on Hostinger often blocks directory names starting with an underscore (`_expo`) or rewrites missing asset requests to `index.html` (which returns `text/html` instead of JavaScript).
+- **Solution applied**:
+  1. We generated a clean, standard directory: **`static/js/bundle.js`** (without leading underscores).
+  2. In `index.html`, the script now loads directly from `static/js/bundle.js` with a failsafe fallback.
+  3. In `.htaccess`, we added rules ensuring `.js` files are **never rewritten to `index.html`** and are strictly served with `Content-Type: application/javascript`.
 
 ---
 
-### Step 2: Upload the 1-Click Zip via File Manager
-1. In Hostinger hPanel, click **Files** ➔ **File Manager**.
-2. Select **Access files of agriheal.in**.
-3. Open the folder created for your subdomain:
-   - Path is usually: `public_html/nearbin` (or `domains/agriheal.in/public_html/nearbin`).
-4. Delete default placeholder files (like `default.php` if present).
-5. Click **Upload** (top right) ➔ Select **File** ➔ Choose:
-   `c:\NearBin\hostinger-deploy-agriheal\nearbin-agriheal.zip`
-6. Once uploaded, right-click `nearbin-agriheal.zip` and click **Extract**.
-7. Choose the current folder as the extraction target.
-8. Delete the `.zip` file after extracting (optional).
+### 2. Fixed: Mobile `"This site can't be reached"`
+Follow these 3 checks in Hostinger hPanel:
+
+#### Check A: File Extraction Location (Most Common)
+In Hostinger File Manager:
+- When you extracted `nearbin-agriheal.zip`, verify that `index.html`, `.htaccess`, `static/`, and `NearBin.apk` are located **directly in your subdomain folder**, NOT inside a nested folder like `public_html/nearbin/nearbin-agriheal/` or `public_html/nearbin/public_html/`.
+- If they are inside a subfolder:
+  1. Open that subfolder.
+  2. Select all files.
+  3. Click **Move** ➔ Move them one level up into your subdomain root (`public_html/nearbin/`).
+
+#### Check B: SSL Certificate for `nearbin.agriheal.in`
+1. Go to Hostinger hPanel ➔ **Security** ➔ **SSL**.
+2. Look at the list: ensure **`nearbin.agriheal.in`** shows an **Active** green shield.
+3. If it says *Failed* or *Not Installed*:
+   - Click the 3 dots ➔ **Reinstall SSL** (free lifetime Let's Encrypt).
+   - Once it shows **Active**, toggle **Force HTTPS** ON.
+
+#### Check C: Mobile DNS Propagation
+New subdomains can take 5–15 minutes to reach mobile cellular networks (Jio / Airtel / Vi):
+- On your phone, toggle Airplane mode ON and OFF (or switch from mobile data to Wi-Fi).
+- Test opening `http://nearbin.agriheal.in` and `https://nearbin.agriheal.in`.
 
 ---
 
-### Step 3: Enable Free 1-Click SSL on the Subdomain
-1. In hPanel, go to **Security** ➔ **SSL**.
-2. Look for `nearbin.agriheal.in`.
-3. If not already active, click **Install SSL** (Hostinger installs lifetime Let's Encrypt SSL free).
-4. Turn on **Force HTTPS**.
+## 🚀 Re-Uploading the Updated Package (`nearbin-agriheal.zip`)
 
----
-
-## 📱 How NearBin Works on All Devices
-
-Visit **`https://nearbin.agriheal.in/`** on any browser:
-
-### 1. On Android Mobile (Chrome, Edge, Samsung Internet):
-- The full website and interactive live waste heatmap load immediately.
-- A smart popup automatically slides up: **"Install NearBin Lite App"**:
-  - ⚡ **Option 1: Add to Home Screen (Instant PWA)**: With 1 tap, NearBin adds itself into the user's **Android App Drawer / Home Screen** (0 MB storage, full-screen, no URL bar).
-  - 📥 **Option 2: Download Standalone APK (4 MB)**: Direct download of the compiled `NearBin.apk`.
-
-### 2. On iOS (iPhone / iPad Safari):
-- A native Apple-styled popup guides the user:
-  - *"Tap Share ⎋ in Safari ➔ Select 'Add to Home Screen' [+] ➔ Tap Add"*.
-  - Once added, NearBin launches as an independent full-screen iOS app!
-
-### 3. On Desktop / Laptop (Windows, Mac, Linux):
-- The app renders an elegant, centered responsive civic dashboard.
-- Users can view the live heatmap, inspect reports, filter by waste categories (Plastic, Scrap, Food, Debris), test camera/GPS, and toggle Dark/Light theme.
-- A desktop install option is available in compatible browsers (Chrome, Edge, Brave).
-
-### 4. Anytime Manual Re-Install:
-- If a user dismisses the install popup, they can open the **Menu** tab anytime and tap **"📲 Install NearBin App"** to trigger the installer!
+1. Open **Hostinger File Manager** for `agriheal.in`.
+2. Open your subdomain directory (usually `public_html/nearbin` or `domains/agriheal.in/public_html/nearbin`).
+3. Delete previous files if needed.
+4. Upload:
+   [`c:\NearBin\hostinger-deploy-agriheal\nearbin-agriheal.zip`](file:///c:/NearBin/hostinger-deploy-agriheal/nearbin-agriheal.zip)
+5. Right-click ➔ **Extract** (ensure destination is the current folder).
+6. Verify these files are at the root of the subdomain folder:
+   - `index.html`
+   - `.htaccess`
+   - `manifest.json`
+   - `sw.js`
+   - `NearBin.apk`
+   - `static/` (contains `static/js/bundle.js`)
+   - `_expo/`
+   - `assets/`
+7. Refresh `https://nearbin.agriheal.in/` in your browser. NearBin will load smoothly at 60 FPS without any MIME type or script errors!
