@@ -1,10 +1,22 @@
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INITIAL_HOTSPOTS } from '../data/mockData';
 
 const STORAGE_KEY = '@nearbin_hotspots_v2';
 const RAW_API_URL = process.env.EXPO_PUBLIC_API_URL || '';
-// Inactive default render endpoint causes net::ERR_FAILED console errors and delays. Only use if valid external host.
-const API_BASE = (RAW_API_URL && !RAW_API_URL.includes('nearbin-api.onrender.com')) ? RAW_API_URL : null;
+
+export function getApiBase() {
+  if (RAW_API_URL && !RAW_API_URL.includes('nearbin-api.onrender.com') && RAW_API_URL !== 'input text') {
+    return RAW_API_URL.replace(/\/+$/, '');
+  }
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    if (window.location.port === '8081' || window.location.port === '19006') {
+      return `${window.location.protocol}//${window.location.hostname}:3001/api`;
+    }
+    return `${window.location.origin}/api`;
+  }
+  return null;
+}
 
 // Helper: Haversine distance in meters
 function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -51,8 +63,10 @@ async function saveStoredHotspots(data) {
 export const WasteService = {
   // Fetch hotspots with filter & distance
   async getHotspots(params = {}) {
-    // 1. Try fetching from remote/local server if reachable and configured
-    if (API_BASE) {
+    const apiBase = getApiBase();
+
+    // 1. Fetch from live backend server if reachable
+    if (apiBase) {
       try {
         const query = new URLSearchParams();
         if (params.category && params.category !== 'all') query.append('category', params.category);
@@ -63,16 +77,26 @@ export const WasteService = {
           query.append('lng', params.lng);
         }
 
-        const res = await fetch(`${API_BASE}/hotspots?${query.toString()}`, { signal: AbortSignal.timeout(1500) });
+        const res = await fetch(`${apiBase}/hotspots?${query.toString()}`, { signal: AbortSignal.timeout(3000) });
         if (res.ok) {
           const data = await res.json();
-          if (data.hotspots && data.hotspots.length > 0) {
-            await saveStoredHotspots(data.hotspots);
-            return data.hotspots;
+          if (Array.isArray(data.hotspots)) {
+            let serverList = data.hotspots;
+            if (params.lat && params.lng) {
+              const uLat = parseFloat(params.lat);
+              const uLng = parseFloat(params.lng);
+              serverList = serverList.map(h => ({
+                ...h,
+                distanceMeters: Math.round(getDistanceMeters(uLat, uLng, h.latitude, h.longitude))
+              }));
+              serverList.sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
+            }
+            await saveStoredHotspots(serverList);
+            return serverList;
           }
         }
       } catch (e) {
-        // Server unreachable, fallback to local storage
+        console.log('[WasteService] Server fetch notice, fallback to local storage:', e?.message);
       }
     }
 
@@ -104,9 +128,47 @@ export const WasteService = {
 
   // Submit report with duplicate / anti-spam logic
   async submitReport(newReport) {
-    const list = await getStoredHotspots();
+    const apiBase = getApiBase();
     const lat = parseFloat(newReport.latitude) || 28.5672;
     const lng = parseFloat(newReport.longitude) || 77.2435;
+
+    // 1. Submit directly to server so all devices immediately see it
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/reports`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newReport),
+          signal: AbortSignal.timeout(4000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hotspot) {
+            const list = await getStoredHotspots();
+            const existingIdx = list.findIndex(h => h.id === data.hotspot.id);
+            let nextList;
+            if (existingIdx >= 0) {
+              nextList = [...list];
+              nextList[existingIdx] = data.hotspot;
+            } else {
+              nextList = [data.hotspot, ...list];
+            }
+            await saveStoredHotspots(nextList);
+            return {
+              success: true,
+              merged: data.merged || false,
+              message: data.message || 'Report published to live heatmap!',
+              hotspot: data.hotspot
+            };
+          }
+        }
+      } catch (e) {
+        console.warn('[WasteService] Server submit notice, falling back to local:', e?.message);
+      }
+    }
+
+    // 2. Offline / Local fallback logic
+    const list = await getStoredHotspots();
 
     // Check duplicate within 25 meters
     const existing = list.find(h => {
@@ -132,11 +194,6 @@ export const WasteService = {
 
       await saveStoredHotspots(list);
 
-      // Async background server sync
-      if (API_BASE) {
-        fetch(`${API_BASE}/reports/${existing.id}/upvote`, { method: 'POST' }).catch(() => {});
-      }
-
       return {
         success: true,
         merged: true,
@@ -146,19 +203,20 @@ export const WasteService = {
     }
 
     const created = {
-      id: `nb-${Date.now().toString(36)}`,
+      id: newReport.id || `nb-${Date.now().toString(36)}`,
       title: newReport.title || `${(newReport.category || 'Waste').toUpperCase()} Dump Spotted`,
       description: newReport.description || 'Reported via camera.',
       category: (newReport.category || 'plastic').toLowerCase(),
       status: 'reported',
       urgency: 'medium',
       upvotes: 1,
+      voters: newReport.reportedBy ? [newReport.reportedBy] : [],
       latitude: lat,
       longitude: lng,
       address: newReport.address || 'GPS verified on Mappls',
       beforePhoto: newReport.beforePhoto,
       afterPhoto: null,
-      photos: [
+      photos: newReport.photos && newReport.photos.length > 0 ? newReport.photos : [
         {
           id: `p-${Date.now()}`,
           uri: newReport.beforePhoto,
@@ -169,6 +227,9 @@ export const WasteService = {
       ],
       reportedBy: newReport.reportedBy || 'Concerned Citizen',
       reportedAt: new Date().toISOString(),
+      characterCount: newReport.characterCount || 0,
+      notesKarma: newReport.notesKarma || 0,
+      karmaAwarded: newReport.karmaAwarded || 50,
       cleanedAt: null,
       cleanedBy: null,
       claimedBy: null
@@ -176,15 +237,6 @@ export const WasteService = {
 
     const updated = [created, ...list];
     await saveStoredHotspots(updated);
-
-    // Background server sync
-    if (API_BASE) {
-      fetch(`${API_BASE}/reports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(created)
-      }).catch(() => {});
-    }
 
     return {
       success: true,
@@ -196,6 +248,30 @@ export const WasteService = {
 
   // Upvote / Vote hotspot (Strict 1-Vote per user)
   async upvoteHotspot(id, voterId = 'citizen') {
+    const apiBase = getApiBase();
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/reports/${id}/upvote`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voterId }),
+          signal: AbortSignal.timeout(3000)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hotspot) {
+            const list = await getStoredHotspots();
+            const idx = list.findIndex(h => h.id === id);
+            if (idx >= 0) list[idx] = data.hotspot;
+            await saveStoredHotspots(list);
+            return { success: data.success !== false, alreadyVoted: !!data.alreadyVoted, hotspot: data.hotspot };
+          }
+        }
+      } catch (e) {
+        console.log('[WasteService] Server upvote notice, fallback to local:', e?.message);
+      }
+    }
+
     const list = await getStoredHotspots();
     const item = list.find(h => h.id === id);
     if (item) {
@@ -211,13 +287,6 @@ export const WasteService = {
       else if (item.upvotes >= 8) item.urgency = 'high';
       await saveStoredHotspots(list);
 
-      if (API_BASE) {
-        fetch(`${API_BASE}/reports/${id}/upvote`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ voterId })
-        }).catch(() => {});
-      }
       return { success: true, hotspot: item };
     }
     return { success: false };
@@ -225,6 +294,30 @@ export const WasteService = {
 
   // Update Status (Govt Worker cleanup proof)
   async updateStatus(id, { status, cleanedBy, afterPhoto }) {
+    const apiBase = getApiBase();
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/reports/${id}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, cleanedBy, afterPhoto }),
+          signal: AbortSignal.timeout(3000)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hotspot) {
+            const list = await getStoredHotspots();
+            const idx = list.findIndex(h => h.id === id);
+            if (idx >= 0) list[idx] = data.hotspot;
+            await saveStoredHotspots(list);
+            return { success: true, hotspot: data.hotspot };
+          }
+        }
+      } catch (e) {
+        console.log('[WasteService] Server status update notice, fallback to local:', e?.message);
+      }
+    }
+
     const list = await getStoredHotspots();
     const item = list.find(h => h.id === id);
     if (item) {
@@ -239,14 +332,6 @@ export const WasteService = {
       }
       await saveStoredHotspots(list);
 
-      if (API_BASE) {
-        fetch(`${API_BASE}/reports/${id}/status`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status, cleanedBy, afterPhoto })
-        }).catch(() => {});
-      }
-
       return { success: true, hotspot: item };
     }
     return { success: false };
@@ -254,19 +339,35 @@ export const WasteService = {
 
   // Claim recyclables (Kabadiwala mode)
   async claimRecyclables(id, claimedBy) {
+    const apiBase = getApiBase();
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/reports/${id}/claim`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ claimedBy }),
+          signal: AbortSignal.timeout(3000)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hotspot) {
+            const list = await getStoredHotspots();
+            const idx = list.findIndex(h => h.id === id);
+            if (idx >= 0) list[idx] = data.hotspot;
+            await saveStoredHotspots(list);
+            return { success: true, hotspot: data.hotspot };
+          }
+        }
+      } catch (e) {
+        console.log('[WasteService] Server claim notice, fallback to local:', e?.message);
+      }
+    }
+
     const list = await getStoredHotspots();
     const item = list.find(h => h.id === id);
     if (item) {
       item.claimedBy = claimedBy || 'Local Scrap Collector';
       await saveStoredHotspots(list);
-
-      if (API_BASE) {
-        fetch(`${API_BASE}/reports/${id}/claim`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ claimedBy })
-        }).catch(() => {});
-      }
 
       return { success: true, hotspot: item };
     }
@@ -275,6 +376,17 @@ export const WasteService = {
 
   // Stats
   async getStats() {
+    const apiBase = getApiBase();
+    if (apiBase) {
+      try {
+        const res = await fetch(`${apiBase}/stats`, { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stats) return { success: true, stats: data.stats };
+        }
+      } catch (e) {}
+    }
+
     const list = await getStoredHotspots();
     const total = list.length;
     const cleaned = list.filter(h => h.status === 'cleaned').length;
@@ -297,13 +409,14 @@ export const WasteService = {
 
   // Save or Update User Profile on Server
   async saveProfile(userData) {
+    const apiBase = getApiBase();
     try {
-      if (API_BASE && !API_BASE.includes('localhost')) {
-        const res = await fetch(`${API_BASE}/user/profile`, {
+      if (apiBase) {
+        const res = await fetch(`${apiBase}/user/profile`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(userData),
-          signal: AbortSignal.timeout(1200),
+          signal: AbortSignal.timeout(2500),
         });
         if (res.ok) {
           const data = await res.json();
@@ -318,10 +431,11 @@ export const WasteService = {
 
   // Instant fetch of User Profile from Server
   async getProfile(userId) {
+    const apiBase = getApiBase();
     try {
-      if (API_BASE && !API_BASE.includes('localhost')) {
-        const res = await fetch(`${API_BASE}/user/profile/${userId}`, {
-          signal: AbortSignal.timeout(1000),
+      if (apiBase) {
+        const res = await fetch(`${apiBase}/user/profile/${userId}`, {
+          signal: AbortSignal.timeout(2000),
         });
         if (res.ok) {
           const data = await res.json();

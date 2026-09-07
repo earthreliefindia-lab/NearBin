@@ -1,15 +1,24 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 const { initDatabase, getAdapter, getDistanceMeters } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const distPath = path.join(__dirname, '..', 'dist');
+
+// Serve compiled PWA frontend
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
 
 // CORS Hardening for Earth Relief India & Mobile Distribution
 const allowedOrigins = [
   'https://earthrelief.in',
   'https://www.earthrelief.in',
   'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:8081',
   'http://localhost:19006',
 ];
@@ -51,7 +60,8 @@ app.get('/api/hotspots', async (req, res) => {
 app.post('/api/reports', async (req, res) => {
   try {
     const db = getAdapter();
-    const { title, description, category, latitude, longitude, address, beforePhoto, reportedBy } = req.body;
+    const reportData = req.body || {};
+    const { title, description, category, latitude, longitude, address, beforePhoto, reportedBy } = reportData;
 
     if (!latitude || !longitude) {
       return res.status(400).json({ success: false, message: 'Latitude and Longitude are required GPS coordinates.' });
@@ -69,25 +79,26 @@ app.post('/api/reports', async (req, res) => {
         success: true,
         merged: true,
         message: 'A report already exists at this spot! Recorded as a High-Priority Upvote (+1).',
-        hotspot: updated || existingNearby
+        hotspot: updated?.hotspot || existingNearby
       });
     }
 
     // Create new hotspot report
     const newReport = {
-      id: `nb-${Date.now().toString(36)}`,
+      id: reportData.id || `nb-${Date.now().toString(36)}`,
       title: title || `${(category || 'Waste').toUpperCase()} Dump Reported`,
       description: description || 'Reported by citizen via live camera capture.',
       category: (category || 'plastic').toLowerCase(),
-      status: 'reported',
-      urgency: 'medium',
-      upvotes: 1,
+      status: reportData.status || 'reported',
+      urgency: reportData.urgency || 'medium',
+      upvotes: reportData.upvotes || 1,
+      voters: reportData.voters || (reportedBy ? [reportedBy] : []),
       latitude: lat,
       longitude: lng,
       address: address || 'Coordinates verified on Mappls',
       beforePhoto: beforePhoto || 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=600&auto=format&fit=crop&q=80',
       afterPhoto: null,
-      photos: beforePhoto ? [
+      photos: reportData.photos && reportData.photos.length > 0 ? reportData.photos : (beforePhoto ? [
         {
           id: `p-${Date.now()}`,
           uri: beforePhoto,
@@ -95,9 +106,12 @@ app.post('/api/reports', async (req, res) => {
           reportedAt: new Date().toISOString(),
           caption: title || 'Garbage spot reported'
         }
-      ] : [],
+      ] : []),
       reportedBy: reportedBy || 'Concerned Citizen',
-      reportedAt: new Date().toISOString(),
+      reportedAt: reportData.reportedAt || new Date().toISOString(),
+      characterCount: reportData.characterCount || 0,
+      notesKarma: reportData.notesKarma || 0,
+      karmaAwarded: reportData.karmaAwarded || 50,
       cleanedAt: null,
       cleanedBy: null,
       claimedBy: null
@@ -122,13 +136,18 @@ app.post('/api/reports/:id/upvote', async (req, res) => {
   try {
     const db = getAdapter();
     const { id } = req.params;
-    const item = await db.upvoteHotspot(id);
+    const { voterId } = req.body || {};
+    const result = await db.upvoteHotspot(id, voterId);
 
-    if (!item) {
+    if (!result || !result.hotspot) {
       return res.status(404).json({ success: false, message: 'Report not found' });
     }
 
-    res.json({ success: true, message: 'Upvoted! Priority boosted on the live heatmap.', hotspot: item });
+    if (result.alreadyVoted) {
+      return res.json({ success: false, alreadyVoted: true, message: 'You have already voted for this spot.', hotspot: result.hotspot });
+    }
+
+    res.json({ success: true, alreadyVoted: false, message: 'Upvoted! Priority boosted on the live heatmap.', hotspot: result.hotspot });
   } catch (err) {
     console.error('[API] /upvote error:', err);
     res.status(500).json({ success: false, message: 'Failed to upvote report' });
@@ -232,6 +251,18 @@ app.get('/api/user/profile/:id', async (req, res) => {
     console.error('[API] /user/profile/:id error:', err);
     res.status(500).json({ success: false, message: 'Failed to retrieve profile' });
   }
+});
+
+// SPA fallback for frontend routes (like /privacy, /terms, /map, /feed)
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ success: false, message: 'API route not found' });
+  }
+  const indexHtml = path.join(distPath, 'index.html');
+  if (fs.existsSync(indexHtml)) {
+    return res.sendFile(indexHtml);
+  }
+  res.send('NearBin API Server is running. Run npm run build:web to build the frontend.');
 });
 
 // Start Server after Database is initialized

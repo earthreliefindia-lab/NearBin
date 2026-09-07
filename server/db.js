@@ -138,17 +138,25 @@ class FileStorageAdapter {
     return data;
   }
 
-  async upvoteHotspot(id) {
+  async upvoteHotspot(id, voterId) {
     const item = this.hotspots.find(h => h.id === id);
     if (!item) return null;
 
+    if (!item.voters) item.voters = [];
+    if (voterId && item.voters.includes(voterId)) {
+      return { alreadyVoted: true, hotspot: item };
+    }
+    if (voterId) {
+      item.voters.push(voterId);
+    }
+
     item.upvotes = (item.upvotes || 0) + 1;
-    if (item.upvotes >= 20) item.urgency = 'critical';
-    else if (item.upvotes >= 10) item.urgency = 'high';
-    else if (item.upvotes >= 5 && item.urgency === 'low') item.urgency = 'medium';
+    if (item.upvotes >= 15) item.urgency = 'critical';
+    else if (item.upvotes >= 8) item.urgency = 'high';
+    else if (item.upvotes >= 4 && item.urgency === 'low') item.urgency = 'medium';
 
     this.saveHotspots();
-    return item;
+    return { alreadyVoted: false, hotspot: item };
   }
 
   async updateHotspotStatus(id, { status, cleanedBy, afterPhoto }) {
