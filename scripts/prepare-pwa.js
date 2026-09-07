@@ -128,6 +128,12 @@ if (fs.existsSync(indexPath)) {
   html = html.replace(/<script src="[^"]*"[^>]*><\/script>/, newScriptTag);
   html = html.replace(/href="\/favicon\.ico"/g, 'href="favicon.ico"');
 
+  // Mobile viewport & tap performance enhancement
+  html = html.replace(
+    /<meta name="viewport"[^>]*>/,
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />'
+  );
+
   // Inject Firebase Official SDK for earthrelief.india@gmail.com (nearbin-ba519)
   const firebaseScripts = `
   <!-- Firebase Official SDK (nearbin-ba519) -->

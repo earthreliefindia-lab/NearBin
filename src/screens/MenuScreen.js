@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { Colors, DarkColors, LightColors } from '../theme/colors';
 import WorkerScreen from './WorkerScreen';
@@ -122,11 +123,17 @@ export default function MenuScreen({
     }
   };
 
-  const displayName = user?.name || 'Keshaw Sharma';
+  const displayName = user?.name || 'Citizen';
   const displayPhone = user?.phone || '+91 98765 43210';
-  const displayWard = user?.ward || 'South Delhi Ward 14 - Malviya Nagar';
-  const displayKarma = user?.karma ?? 480;
-  const displayReports = user?.verifiedReports ?? 14;
+  const displayWard = user?.ward || 'Municipal Ward - Geotagged Zone';
+  const displayKarma = user?.karma ?? 300;
+  const displayReports = user?.verifiedReports ?? 0;
+  const isGoogleUser = Boolean(user?.authProvider?.toLowerCase().includes('google') || user?.email);
+  const isAvatarUrl = Boolean(
+    user?.avatar &&
+    (typeof user.avatar === 'string') &&
+    (user.avatar.startsWith('http://') || user.avatar.startsWith('https://'))
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -143,10 +150,20 @@ export default function MenuScreen({
         <View style={[styles.profileCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
           <View style={styles.profileTop}>
             <View style={[styles.avatarCircle, { borderColor: theme.primary, backgroundColor: theme.surfaceVariant }]}>
-              <Text style={styles.avatarEmoji}>{user?.avatar || '🇮🇳'}</Text>
+              {isAvatarUrl ? (
+                <Image
+                  source={{ uri: user.avatar }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarEmoji}>
+                  {user?.avatar && user.avatar.length <= 4 ? user.avatar : '🌱'}
+                </Text>
+              )}
             </View>
             <View style={styles.profileMeta}>
-              <Text style={[styles.userName, { color: theme.textPrimary }]}>{displayName}</Text>
+              <Text style={[styles.userName, { color: theme.textPrimary }]} numberOfLines={1}>{displayName}</Text>
               <Text style={[styles.userWard, { color: theme.textSecondary }]} numberOfLines={1}>
                 📍 {displayWard}
               </Text>
@@ -164,11 +181,20 @@ export default function MenuScreen({
 
           {/* User Contact & Auth method badge */}
           <View style={[styles.contactRow, { borderTopColor: theme.border }]}>
-            <Text style={[styles.contactLabel, { color: theme.textMuted }]}>Contact / ID:</Text>
-            <Text style={[styles.contactValue, { color: theme.textPrimary }]}>{displayPhone}</Text>
-            <View style={[styles.authProviderBadge, { backgroundColor: theme.primaryContainer }]}>
-              <Text style={[styles.authProviderText, { color: theme.primary }]}>
-                {user?.authProvider === 'google' ? 'Google' : 'Phone OTP'}
+            <Text style={[styles.contactLabel, { color: theme.textMuted }]}>
+              {user?.email ? 'Account:' : 'Contact / ID:'}
+            </Text>
+            <Text style={[styles.contactValue, { color: theme.textPrimary }]} numberOfLines={1}>
+              {user?.email || displayPhone}
+            </Text>
+            <View
+              style={[
+                styles.authProviderBadge,
+                { backgroundColor: isGoogleUser ? 'rgba(66, 133, 244, 0.12)' : theme.primaryContainer },
+              ]}
+            >
+              <Text style={[styles.authProviderText, { color: isGoogleUser ? '#4285F4' : theme.primary }]}>
+                {isGoogleUser ? '🌐 Google Verified' : '📱 Phone OTP'}
               </Text>
             </View>
           </View>
@@ -652,12 +678,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
   },
   avatarEmoji: {
     fontSize: 26,

@@ -9,6 +9,7 @@ import {
   StatusBar,
   useColorScheme,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import { Provider as PaperProvider, MD3DarkTheme, MD3LightTheme } from 'react-native-paper';
 import * as Location from 'expo-location';
@@ -372,7 +373,17 @@ export default function App() {
                   onPress={() => setCurrentTab('menu')}
                   activeOpacity={0.8}
                 >
-                  <Text style={{ fontSize: 16 }}>{user.avatar || '🇮🇳'}</Text>
+                  {user.avatar && (user.avatar.startsWith('http://') || user.avatar.startsWith('https://')) ? (
+                    <Image
+                      source={{ uri: user.avatar }}
+                      style={styles.desktopUserAvatarImg}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 16 }}>
+                      {user.avatar && user.avatar.length <= 4 ? user.avatar : '🌱'}
+                    </Text>
+                  )}
                   <Text style={[styles.desktopUserName, { color: activeColors.textPrimary }]} numberOfLines={1}>
                     {user.name || 'Citizen'}
                   </Text>
@@ -396,6 +407,8 @@ export default function App() {
               onRecenter={handleRecenter}
               isDark={isDark}
               isDesktop={isDesktop}
+              onToggleTheme={handleToggleTheme}
+              onOpenInstall={() => setInstallModalVisible(true)}
             />
           )}
 
@@ -632,16 +645,23 @@ const styles = StyleSheet.create({
   desktopUserChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
     gap: 8,
-    maxWidth: 160,
+    maxWidth: 180,
+    overflow: 'hidden',
+  },
+  desktopUserAvatarImg: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
   desktopUserName: {
     fontSize: 12,
     fontWeight: '800',
+    maxWidth: 120,
   },
 });
 

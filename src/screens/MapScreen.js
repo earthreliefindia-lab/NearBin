@@ -25,12 +25,15 @@ export default function MapScreen({
   onRecenter,
   isDark = true,
   isDesktop = false,
+  onToggleTheme,
+  onOpenInstall,
 }) {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedHotspot, setSelectedHotspot] = useState(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [mapKey, setMapKey] = useState(1);
+  const [hintDismissed, setHintDismissed] = useState(false);
 
   const theme = isDark ? DarkColors : LightColors;
 
@@ -175,8 +178,30 @@ export default function MapScreen({
               </Text>
               <View style={styles.liveHeatmapBadge}>
                 <View style={styles.liveDot} />
-                <Text style={styles.liveText}>SNAP HEATMAP ACTIVE</Text>
+                <Text style={styles.liveText}>SNAP HEATMAP</Text>
               </View>
+            </View>
+
+            {/* Mobile Header Quick Actions */}
+            <View style={styles.mobileHeaderActions}>
+              {onToggleTheme && (
+                <TouchableOpacity
+                  style={[styles.mobileHeaderBtn, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}
+                  onPress={onToggleTheme}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 13 }}>{isDark ? '☀️' : '🌙'}</Text>
+                </TouchableOpacity>
+              )}
+              {onOpenInstall && (
+                <TouchableOpacity
+                  style={[styles.mobileHeaderBtn, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+                  onPress={onOpenInstall}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 13 }}>📲</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -228,7 +253,7 @@ export default function MapScreen({
 
       {/* Clean Slate Guidance Hint (Displays until first report is submitted) */}
       {/* Clean Slate Guidance Hint for Mobile (Desktop renders this in sidebar) */}
-      {!isDesktop && filteredHotspots.length === 0 && (
+      {!isDesktop && !hintDismissed && filteredHotspots.length === 0 && (
         <View
           style={[
             styles.emptyHintCard,
@@ -247,8 +272,13 @@ export default function MapScreen({
                 <Text style={[styles.emptyHintTitle, { color: theme.textPrimary }]}>
                   Clean Neighborhood!
                 </Text>
-                <View style={[styles.liveCleanBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
-                  <Text style={[styles.liveCleanText, { color: theme.primary }]}>100% CLEAN</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={[styles.liveCleanBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                    <Text style={[styles.liveCleanText, { color: theme.primary }]}>100% CLEAN</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setHintDismissed(true)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                    <Text style={{ color: theme.textMuted, fontSize: 16, fontWeight: '800', paddingLeft: 4 }}>✕</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
               <Text style={[styles.emptyHintSub, { color: theme.textSecondary }]}>
@@ -358,13 +388,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     marginBottom: 10,
   },
   brandRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
+  },
+  mobileHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mobileHeaderBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brandLogo: {
     fontSize: 22,
