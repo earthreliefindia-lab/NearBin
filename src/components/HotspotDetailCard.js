@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, ActivityIndicator, Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, CategoryMeta } from '../theme/colors';
 import BeforeAfterView from './BeforeAfterView';
 import StoryViewerModal from './StoryViewerModal';
@@ -13,6 +14,7 @@ export default function HotspotDetailCard({
   hasVoted = false,
   onUpdateStatus,
   onClaimRecyclables,
+  user,
 }) {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showStoryModal, setShowStoryModal] = useState(false);
@@ -22,6 +24,21 @@ export default function HotspotDetailCard({
   const catInfo = CategoryMeta[hotspot.category] || CategoryMeta.plastic;
   const isCleaned = hotspot.status === 'cleaned';
   const isInProgress = hotspot.status === 'in_progress';
+  const isRecycledPickedUp = hotspot.status === 'recycled_picked_up' || Boolean(hotspot.claimedBy);
+
+  const totalPhotosCount = (() => {
+    let count = 0;
+    if (hotspot.beforePhoto) count++;
+    if (Array.isArray(hotspot.photos)) {
+      count = Math.max(count, hotspot.photos.length);
+    }
+    if (hotspot.afterPhoto) count++;
+    return Math.max(1, count);
+  })();
+
+  const workerOfficialAttribution = user?.designation && user?.department
+    ? `${user.name} (${user.designation}, ${user.department}${user.employeeId ? ` - ID: ${user.employeeId}` : ''})`
+    : (user?.name ? `${user.name} (Govt Safai Mitra)` : 'MCD Safai Squad Team');
 
   // Role Action Handlers
   const handleUpvoteClick = async () => {
@@ -39,7 +56,7 @@ export default function HotspotDetailCard({
     try {
       await onUpdateStatus(hotspot.id, {
         status: 'in_progress',
-        cleanedBy: 'MCD Safai Squad Team',
+        cleanedBy: workerOfficialAttribution,
       });
     } finally {
       setIsActionLoading(false);
@@ -47,12 +64,31 @@ export default function HotspotDetailCard({
   };
 
   const handleCompleteCleanup = async () => {
-    setIsActionLoading(true);
     try {
-      // Mock after photo URL
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      let proofPhotoUri = 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=600&auto=format&fit=crop&q=80';
+      if (status === 'granted') {
+        const result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          quality: 0.7,
+          aspect: [4, 3],
+        });
+        if (!result.canceled && result.assets && result.assets[0]) {
+          proofPhotoUri = result.assets[0].uri;
+        }
+      }
+      setIsActionLoading(true);
       await onUpdateStatus(hotspot.id, {
         status: 'cleaned',
-        cleanedBy: 'Govt Safai Mitra - Ashok Kumar',
+        cleanedBy: workerOfficialAttribution,
+        afterPhoto: proofPhotoUri,
+      });
+    } catch (e) {
+      console.log('Worker camera proof error:', e);
+      setIsActionLoading(true);
+      await onUpdateStatus(hotspot.id, {
+        status: 'cleaned',
+        cleanedBy: workerOfficialAttribution,
         afterPhoto: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=600&auto=format&fit=crop&q=80',
       });
     } finally {
@@ -63,7 +99,8 @@ export default function HotspotDetailCard({
   const handleClaimScrap = async () => {
     setIsActionLoading(true);
     try {
-      await onClaimRecyclables(hotspot.id, 'Raju Kabadiwala (Scrap Recycler)');
+      const claimerName = user?.name ? `${user.name} (Kabadiwala Recycler)` : 'Raju Kabadiwala (Scrap Recycler)';
+      await onClaimRecyclables(hotspot.id, claimerName);
     } finally {
       setIsActionLoading(false);
     }
@@ -89,6 +126,10 @@ export default function HotspotDetailCard({
                   styles.badge,
                   isCleaned
                     ? { backgroundColor: Colors.lowContainer, borderColor: Colors.low }
+                    : isRecycledPickedUp
+                    ? { backgroundColor: 'rgba(255, 145, 0, 0.18)', borderColor: '#FF9100' }
+                    : isInProgress
+                    ? { backgroundColor: 'rgba(0, 176, 255, 0.18)', borderColor: '#00B0FF' }
                     : hotspot.urgency === 'critical'
                     ? { backgroundColor: Colors.criticalContainer, borderColor: Colors.critical }
                     : { backgroundColor: Colors.highContainer, borderColor: Colors.high },
@@ -100,16 +141,56 @@ export default function HotspotDetailCard({
                     {
                       color: isCleaned
                         ? Colors.low
+                        : isRecycledPickedUp
+                        ? '#FF9100'
+                        : isInProgress
+                        ? '#00B0FF'
                         : hotspot.urgency === 'critical'
                         ? Colors.critical
                         : Colors.high,
                     },
                   ]}
                 >
-                  {isCleaned ? 'CLEANED & VERIFIED' : `${hotspot.urgency.toUpperCase()} URGENCY`}
+                  {isCleaned
+                    ? 'CLEANED & VERIFIED'
+                    : isRecycledPickedUp
+                    ? 'RECYCLED PICKED UP'
+                    : isInProgress
+                    ? 'CLEANUP IN PROGRESS'
+                    : `${(hotspot.urgency || 'MEDIUM').toUpperCase()} URGENCY`}
                 </Text>
               </View>
             </View>
+
+            {/* Recycled Picked Up Notice Banner */}
+            {isRecycledPickedUp && !isCleaned && (
+              <View style={[styles.recycledBanner, { backgroundColor: 'rgba(255, 145, 0, 0.12)', borderColor: '#FF9100' }]}>
+                <Text style={{ fontSize: 16 }}>♻️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#FF9100' }}>
+                    Recyclables Claimed & Picked Up
+                  </Text>
+                  <Text style={{ fontSize: 11, color: Colors.textSecondary }}>
+                    Claimed by: {hotspot.claimedBy || 'Kabadiwala Scrap Recycler'}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Cleaned By Attribution Notice */}
+            {isCleaned && hotspot.cleanedBy && (
+              <View style={[styles.recycledBanner, { backgroundColor: Colors.lowContainer, borderColor: Colors.low }]}>
+                <Text style={{ fontSize: 16 }}>✨</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: Colors.low }}>
+                    Sanitized & Cleaned By Govt Squad
+                  </Text>
+                  <Text style={{ fontSize: 11, color: Colors.textSecondary }}>
+                    {hotspot.cleanedBy}
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Title & Address */}
             <Text style={styles.title}>{hotspot.title}</Text>
@@ -118,7 +199,7 @@ export default function HotspotDetailCard({
             {/* Before vs After Photo Display */}
             <BeforeAfterView beforePhoto={hotspot.beforePhoto} afterPhoto={hotspot.afterPhoto} />
 
-            {/* Snapchat Story Button */}
+            {/* Live Status Button */}
             <TouchableOpacity
               style={styles.storyBtn}
               onPress={() => setShowStoryModal(true)}
@@ -126,8 +207,8 @@ export default function HotspotDetailCard({
             >
               <Text style={styles.storyBtnEmoji}>⚡</Text>
               <View style={{ flex: 1 }}>
-                <Text style={styles.storyBtnTitle}>Snapchat Stories at this Spot</Text>
-                <Text style={styles.storyBtnSubtitle}>Watch all citizen uploads as fullscreen stories</Text>
+                <Text style={styles.storyBtnTitle}>Live Status ({totalPhotosCount} Photo{totalPhotosCount > 1 ? 's' : ''})</Text>
+                <Text style={styles.storyBtnSubtitle}>View all citizen & verification photos at this spot</Text>
               </View>
               <Text style={styles.storyArrow}>▶</Text>
             </TouchableOpacity>
@@ -146,10 +227,24 @@ export default function HotspotDetailCard({
                 <Text
                   style={[
                     styles.metaValue,
-                    { color: isCleaned ? Colors.low : isInProgress ? Colors.medium : Colors.high },
+                    {
+                      color: isCleaned
+                        ? Colors.low
+                        : isRecycledPickedUp
+                        ? '#FF9100'
+                        : isInProgress
+                        ? Colors.medium
+                        : Colors.high,
+                    },
                   ]}
                 >
-                  {isCleaned ? 'CLEANED' : isInProgress ? 'IN PROGRESS' : 'REPORTED'}
+                  {isCleaned
+                    ? 'CLEANED'
+                    : isRecycledPickedUp
+                    ? 'RECYCLED PICKED UP'
+                    : isInProgress
+                    ? 'IN PROGRESS'
+                    : 'REPORTED'}
                 </Text>
               </View>
             </View>
@@ -234,7 +329,7 @@ export default function HotspotDetailCard({
             )}
 
             {/* 3. SCRAP PICKER ACTIONS */}
-            {currentRole === 'scrap' && (
+            {(currentRole === 'scrap' || currentRole === 'scrap_picker') && (
               <TouchableOpacity
                 style={[
                   styles.primaryActionBtn,
@@ -487,5 +582,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.primary,
     fontWeight: '900',
+  },
+  recycledBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
   },
 });

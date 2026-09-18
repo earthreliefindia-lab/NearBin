@@ -181,7 +181,7 @@ export default function WasteReportModal({ visible, onClose, onSubmit, userLocat
             <View style={[styles.antiSpamBadge, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
               <Text style={styles.antiSpamIcon}>🛡️</Text>
               <Text style={[styles.antiSpamText, { color: theme.textSecondary }]}>
-                Snapchat Stories Active: Multiple photos uploaded at this same spot become part of that hotspot's live story!
+                Live Status Active: Multiple photos uploaded at this same spot become part of that hotspot's live status gallery!
               </Text>
             </View>
 

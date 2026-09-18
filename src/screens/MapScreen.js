@@ -399,6 +399,7 @@ export default function MapScreen({
           await onClaimRecyclables(id, claimedBy);
           setSelectedHotspot(null);
         }}
+        user={user}
       />
     </View>
   );

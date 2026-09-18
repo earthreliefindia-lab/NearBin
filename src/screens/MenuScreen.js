@@ -64,12 +64,21 @@ export default function MenuScreen({
   onClaimWelcomeBonus,
   onShareReferral,
   userLocation,
+  onNavigateTab,
 }) {
   const [activeSubScreen, setActiveSubScreen] = useState(null); // 'worker' | 'scrap' | 'about' | null
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isClaimingWelcome, setIsClaimingWelcome] = useState(false);
+  const [localKarma, setLocalKarma] = useState(null);
+  const [welcomeClaimedLocal, setWelcomeClaimedLocal] = useState(false);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [referralStats, setReferralStats] = useState({ friendsJoined: 0, karmaEarned: 0 });
+
+  useEffect(() => {
+    if (user?.karma !== undefined) {
+      setLocalKarma(user.karma);
+    }
+  }, [user?.karma]);
 
   useEffect(() => {
     if (user) {
@@ -82,23 +91,50 @@ export default function MenuScreen({
   }, [user]);
 
   // Edit profile form state
-  const [editName, setEditName] = useState(user?.name || 'Keshaw Sharma');
-  const [editPhone, setEditPhone] = useState(user?.phone || '+91 98765 43210');
-  const [editWard, setEditWard] = useState(user?.ward || 'South Delhi Ward 14 - Malviya Nagar');
+  const [editName, setEditName] = useState(user?.name || '');
+  const [editPhone, setEditPhone] = useState(user?.phone || '');
+  const [editWard, setEditWard] = useState(user?.ward || '');
+  const [editDesignation, setEditDesignation] = useState(user?.designation || '');
+  const [editDepartment, setEditDepartment] = useState(user?.department || '');
+  const [editEmployeeId, setEditEmployeeId] = useState(user?.employeeId || '');
+  const [editGovRole, setEditGovRole] = useState(user?.govRole || '');
 
   const theme = isDark ? DarkColors : LightColors;
 
   const handleOpenEdit = () => {
-    setEditName(user?.name || 'Keshaw Sharma');
-    setEditPhone(user?.phone || '+91 98765 43210');
-    setEditWard(user?.ward || 'South Delhi Ward 14 - Malviya Nagar');
+    setEditName(user?.name || '');
+    setEditPhone(user?.phone || '');
+    setEditWard(user?.ward || '');
+    setEditDesignation(user?.designation || '');
+    setEditDepartment(user?.department || '');
+    setEditEmployeeId(user?.employeeId || '');
+    setEditGovRole(user?.govRole || '');
     setIsEditingProfile(true);
   };
 
   const handleSaveProfile = () => {
     if (!editName.trim()) {
-      Alert.alert('Validation Error', 'Name cannot be empty.');
+      Alert.alert('Validation Error', 'Full Name cannot be empty.');
       return;
+    }
+
+    if (user?.role === 'worker') {
+      if (!editDesignation.trim()) {
+        Alert.alert('Government Profile Incomplete', 'Official Designation is required (e.g. Ward Inspector / Sanitation Superintendent).');
+        return;
+      }
+      if (!editDepartment.trim()) {
+        Alert.alert('Government Profile Incomplete', 'Department is required (e.g. Municipal Corporation Solid Waste Management).');
+        return;
+      }
+      if (!editEmployeeId.trim()) {
+        Alert.alert('Government Profile Incomplete', 'Government Employee ID / Badge Number is required.');
+        return;
+      }
+      if (!editWard.trim()) {
+        Alert.alert('Government Profile Incomplete', 'Assigned Municipal Ward / Zone is required.');
+        return;
+      }
     }
 
     const updated = {
@@ -106,16 +142,29 @@ export default function MenuScreen({
       name: editName.trim(),
       phone: editPhone.trim(),
       ward: editWard.trim(),
+      designation: editDesignation.trim(),
+      department: editDepartment.trim(),
+      employeeId: editEmployeeId.trim(),
+      govRole: editGovRole.trim(),
+      role: user?.role || 'citizen', // PERMANENT ROLE LOCK - Preserves registration role
     };
 
     if (onUpdateProfile) {
       onUpdateProfile(updated);
     }
     setIsEditingProfile(false);
-    Alert.alert('Profile Updated', 'Your civic profile has been saved and synced to the server.');
+    Alert.alert('Profile Updated', 'Your official profile details have been saved and verified.');
   };
 
   const handleConfirmLogout = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm('Are you sure you want to sign out from NearBin?');
+      if (confirmed) {
+        if (onLogout) onLogout();
+      }
+      return;
+    }
+
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out from NearBin?',
@@ -133,11 +182,21 @@ export default function MenuScreen({
   };
 
   const handleClaimWelcome = async () => {
-    if (!user || !onClaimWelcomeBonus || isClaimingWelcome) return;
+    if (!user) {
+      if (onRequireAuth) onRequireAuth();
+      return;
+    }
+    if (!onClaimWelcomeBonus || isClaimingWelcome) return;
     setIsClaimingWelcome(true);
     try {
       const result = await onClaimWelcomeBonus();
-      Alert.alert('Welcome reward claimed', `500 Karma points are now in your NearBin account. New balance: ${result.karma}.`);
+      const updatedKarma = result?.karma ?? ((localKarma !== null ? localKarma : (user.karma || 0)) + 500);
+      setLocalKarma(updatedKarma);
+      setWelcomeClaimedLocal(true);
+      if (result?.user && onUpdateProfile) {
+        onUpdateProfile(result.user);
+      }
+      Alert.alert('Welcome reward claimed', `500 Karma points are now in your NearBin account! New balance: ${updatedKarma}.`);
     } catch (error) {
       Alert.alert('Could not claim reward', error?.message || 'Please try again in a moment.');
     } finally {
@@ -191,7 +250,7 @@ export default function MenuScreen({
   const displayName = user?.name || 'Citizen';
   const displayPhone = user?.phone || '+91 98765 43210';
   const displayWard = user?.ward || 'Municipal Ward - Geotagged Zone';
-  const displayKarma = user?.karma ?? 0;
+  const displayKarma = localKarma !== null ? localKarma : (user?.karma ?? 0);
   const displayReports = user?.verifiedReports ?? 0;
   const isGoogleUser = Boolean(user?.authProvider?.toLowerCase().includes('google') || user?.email);
   const isAvatarUrl = Boolean(
@@ -201,6 +260,13 @@ export default function MenuScreen({
   );
 
   const cityRanking = getCityCleanlinessData(userLocation, user?.ward);
+
+  // Dynamic City Impact metrics calculated live from verified reports
+  const totalHotspots = Array.isArray(hotspots) ? hotspots.length : (stats?.totalSpots || 0);
+  const cleanedSpots = Array.isArray(hotspots) ? hotspots.filter((h) => h.status === 'cleaned').length : (stats?.cleanedSpots || 0);
+  const inProgressSpots = Array.isArray(hotspots) ? hotspots.filter((h) => h.status === 'in_progress').length : (stats?.inProgressSpots || 0);
+  const recyclablesDiverted = Array.isArray(hotspots) ? hotspots.filter((h) => ['plastic', 'scrap'].includes((h.category || '').toLowerCase())).length : (stats?.recyclablesDiverted || 0);
+  const cleanRate = totalHotspots > 0 ? Math.round((cleanedSpots / totalHotspots) * 100) : 0;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -232,7 +298,41 @@ export default function MenuScreen({
               <Text style={[styles.userWard, { color: theme.textSecondary }]} numberOfLines={1}>
                 📍 {displayWard}
               </Text>
-              <Text style={[styles.userBadge, { color: theme.primary }]}>⭐ Swachhata Champion</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <View
+                  style={[
+                    styles.roleBadgeBox,
+                    {
+                      backgroundColor:
+                        user?.role === 'worker'
+                          ? 'rgba(0, 230, 118, 0.15)'
+                          : user?.role === 'scrap_picker'
+                          ? 'rgba(255, 145, 0, 0.15)'
+                          : 'rgba(33, 150, 243, 0.15)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.roleBadgeText,
+                      {
+                        color:
+                          user?.role === 'worker'
+                            ? '#00E676'
+                            : user?.role === 'scrap_picker'
+                            ? '#FF9100'
+                            : '#2196F3',
+                      },
+                    ]}
+                  >
+                    {user?.role === 'worker'
+                      ? '🏛️ Govt Safai Mitra'
+                      : user?.role === 'scrap_picker'
+                      ? '♻️ Kabadiwala Recycler'
+                      : '👤 Citizen'}
+                  </Text>
+                </View>
+              </View>
             </View>
             {/* Edit Profile Button or Sign In Button */}
             {user ? (
@@ -274,24 +374,304 @@ export default function MenuScreen({
             </View>
           </View>
 
-          {/* Karma Metric Banner */}
-          <View style={[styles.karmaBanner, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
-            <View style={styles.karmaBlock}>
-              <Text style={[styles.karmaNum, { color: theme.primary }]}>{displayKarma}</Text>
-              <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Karma Points</Text>
+          {/* Government Official Credentials (Strictly for Government Role) */}
+          {user?.role === 'worker' && (
+            <View style={[styles.govCredBox, { backgroundColor: isDark ? 'rgba(0, 176, 255, 0.08)' : '#F0F9FF', borderColor: '#00B0FF' }]}>
+              <View style={styles.govCredTopRow}>
+                <Text style={{ fontSize: 18 }}>🏛️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#00B0FF' }}>
+                    GOVERNMENT SANITATION OFFICIAL CREDENTIALS
+                  </Text>
+                  <Text style={{ fontSize: 10, color: theme.textSecondary }}>
+                    Verified Municipal Corporation Personnel Authority
+                  </Text>
+                </View>
+                <View style={[styles.govBadgeSmall, { backgroundColor: 'rgba(0, 176, 255, 0.18)', borderColor: '#00B0FF' }]}>
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#00B0FF' }}>MUNICIPAL SQUAD</Text>
+                </View>
+              </View>
+
+              <View style={[styles.govCredFieldsRow, { borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.govCredFieldLabel, { color: theme.textMuted }]}>DESIGNATION</Text>
+                  <Text style={[styles.govCredFieldValue, { color: user.designation ? theme.textPrimary : theme.critical }]}>
+                    {user.designation || '⚠️ Not Set (Click Edit)'}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.govCredFieldLabel, { color: theme.textMuted }]}>EMPLOYEE ID</Text>
+                  <Text style={[styles.govCredFieldValue, { color: user.employeeId ? theme.textPrimary : theme.critical }]}>
+                    {user.employeeId || '⚠️ Not Set'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.govCredFieldsRow, { borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.govCredFieldLabel, { color: theme.textMuted }]}>DEPARTMENT</Text>
+                  <Text style={[styles.govCredFieldValue, { color: user.department ? theme.textPrimary : theme.critical }]}>
+                    {user.department || '⚠️ Municipal SWM Division'}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.govCredFieldLabel, { color: theme.textMuted }]}>JURISDICTION / WARD</Text>
+                  <Text style={[styles.govCredFieldValue, { color: theme.textPrimary }]}>
+                    {user.ward || 'Assigned Zone'}
+                  </Text>
+                </View>
+              </View>
+
+              {(!user.designation || !user.department || !user.employeeId) && (
+                <TouchableOpacity
+                  style={styles.govIncompleteWarningBtn}
+                  onPress={handleOpenEdit}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.govIncompleteWarningBtnText}>
+                    ⚠️ Incomplete Credentials - Tap to Fill Designation & Employee ID
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
-            <View style={styles.karmaBlock}>
-              <Text style={[styles.karmaNum, { color: theme.secondary }]}>{displayReports}</Text>
-              <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Spots Verified</Text>
+          )}
+
+          {/* Metrics Banner: Karma for Citizens ONLY, Operational Stats for Govt & Kabadiwala */}
+          {(!user || user.role === 'citizen') ? (
+            <View style={[styles.karmaBanner, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: theme.primary }]}>{displayKarma}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Karma Points</Text>
+              </View>
+              <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: theme.secondary }]}>{displayReports}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Spots Verified</Text>
+              </View>
+              <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: theme.high }]}>#{cityRanking.nationalRank}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>{cityRanking.cityName.split(' ')[0]} Rank</Text>
+              </View>
             </View>
-            <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
-            <View style={styles.karmaBlock}>
-              <Text style={[styles.karmaNum, { color: theme.high }]}>#{cityRanking.nationalRank}</Text>
-              <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>{cityRanking.cityName.split(' ')[0]} Rank</Text>
+          ) : user.role === 'worker' ? (
+            <View style={[styles.karmaBanner, { backgroundColor: theme.surfaceVariant, borderColor: '#00B0FF', borderWidth: 1 }]}>
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: '#00C853' }]}>{cleanedSpots}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Sites Cleared</Text>
+              </View>
+              <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: '#00B0FF' }]}>{inProgressSpots}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>In Progress</Text>
+              </View>
+              <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: theme.high }]}>#{cityRanking.nationalRank}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>City Rank</Text>
+              </View>
             </View>
+          ) : (
+            <View style={[styles.karmaBanner, { backgroundColor: theme.surfaceVariant, borderColor: '#FF9100', borderWidth: 1 }]}>
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: '#FF9100' }]}>{recyclablesDiverted}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Scrap Sites</Text>
+              </View>
+              <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: theme.primary }]}>{cleanedSpots}</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Recycled</Text>
+              </View>
+              <View style={[styles.karmaDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.karmaBlock}>
+                <Text style={[styles.karmaNum, { color: theme.secondary }]}>100%</Text>
+                <Text style={[styles.karmaLabel, { color: theme.textMuted }]}>Circular Flow</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Dedicated Profile & Role Selection Element - Strictly Locked to Account */}
+          <View style={[styles.profileRoleBox, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+            <View style={styles.profileRoleTopRow}>
+              <Text style={[styles.profileRoleHeader, { color: theme.textSecondary }]}>
+                PROFILE ACCESS & MODE
+              </Text>
+              <View style={[styles.activeRoleTag, { backgroundColor: theme.primaryContainer }]}>
+                <Text style={[styles.activeRoleTagText, { color: theme.primary }]}>
+                  🔒 {user ? (user.role === 'worker' ? 'Govt Mitra (Locked)' : user.role === 'scrap_picker' ? 'Kabadiwala (Locked)' : 'Citizen (Locked)') : 'Sign In Required'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.profileRoleGrid}>
+              {[
+                {
+                  id: 'citizen',
+                  title: 'Citizen',
+                  sub: 'Report & Vote',
+                  icon: '👤',
+                  color: '#00C853',
+                },
+                {
+                  id: 'worker',
+                  title: 'Govt Mitra',
+                  sub: 'Clean & Proof',
+                  icon: '🏛️',
+                  color: '#00B0FF',
+                },
+                {
+                  id: 'scrap_picker',
+                  title: 'Kabadiwala',
+                  sub: 'Scrap Radar',
+                  icon: '♻️',
+                  color: '#FF9100',
+                },
+              ].map((r) => {
+                const isCurrent = user ? (user.role || 'citizen') === r.id : false;
+                return (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={[
+                      styles.profileRoleCard,
+                      {
+                        backgroundColor: isCurrent
+                          ? (isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF')
+                          : 'transparent',
+                        borderColor: isCurrent ? r.color : theme.border,
+                        opacity: user ? (isCurrent ? 1 : 0.45) : 0.7,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (!user) {
+                        Alert.alert('Sign In Required', 'Please sign in with your Google account to access your assigned role mode.');
+                        if (onRequireAuth) onRequireAuth();
+                        return;
+                      }
+                      if (!isCurrent) {
+                        const currentTitle = user.role === 'worker' ? 'Government Safai Mitra' : user.role === 'scrap_picker' ? 'Kabadiwala Recycler' : 'Citizen';
+                        Alert.alert(
+                          'Role Mode Locked',
+                          `This Google account is permanently registered as "${currentTitle}". In accordance with security & verification policy, profile modes cannot be switched. To use ${r.title} mode, please sign out and log in with an account registered for that role.`
+                        );
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.profileRoleCardIcon}>{r.icon}</Text>
+                    <Text style={[styles.profileRoleCardTitle, { color: isCurrent ? r.color : theme.textPrimary }]}>
+                      {r.title}
+                    </Text>
+                    <Text style={[styles.profileRoleCardSub, { color: isCurrent ? theme.textSecondary : theme.textMuted }]}>
+                      {isCurrent ? '🔒 Active & Locked' : '🔒 Locked'}
+                    </Text>
+                    {isCurrent && (
+                      <View style={[styles.profileRoleActiveDot, { backgroundColor: r.color }]} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={{ fontSize: 10, color: theme.textMuted, marginTop: 8, textAlign: 'center' }}>
+              🔒 Account Security: Profile mode is permanently bound to your Google account registration to ensure role authority.
+            </Text>
           </View>
         </View>
+
+        {/* 1. OPERATIONAL PANELS - Top of menu, directly below profile section (Visible only to Government & Kabadiwala) */}
+        {user?.role === 'worker' && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={[styles.sectionHeading, { color: theme.textMuted, marginTop: 4 }]}>
+              GOVERNMENT OPERATIONAL PANEL
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.portalCard,
+                {
+                  backgroundColor: theme.surfaceCard,
+                  borderColor: '#00C853',
+                  borderWidth: 1.5,
+                  shadowColor: '#00C853',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                  elevation: 3,
+                },
+              ]}
+              onPress={() => {
+                if (onNavigateTab) {
+                  onNavigateTab('feed');
+                } else {
+                  setActiveSubScreen('worker');
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.portalIconBox, { backgroundColor: 'rgba(0, 200, 83, 0.16)' }]}>
+                <Text style={styles.portalEmoji}>🚜</Text>
+              </View>
+              <View style={styles.portalTextCol}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.portalTitle, { color: theme.textPrimary }]}>Govt Safai Mitra Portal</Text>
+                  <View style={{ backgroundColor: 'rgba(0, 200, 83, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#00C853' }}>ACTIVE ROLE</Text>
+                  </View>
+                </View>
+                <Text style={[styles.portalSubtitle, { color: theme.textSecondary }]}>
+                  Replaces Nearby Feed • Tap to open Govt Operations workspace
+                </Text>
+              </View>
+              <Text style={[styles.portalArrow, { color: '#00C853' }]}>➔</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {user?.role === 'scrap_picker' && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={[styles.sectionHeading, { color: theme.textMuted, marginTop: 4 }]}>
+              KABADIWALA RADAR PANEL
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.portalCard,
+                {
+                  backgroundColor: theme.surfaceCard,
+                  borderColor: '#FF9100',
+                  borderWidth: 1.5,
+                  shadowColor: '#FF9100',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                  elevation: 3,
+                },
+              ]}
+              onPress={() => {
+                if (onNavigateTab) {
+                  onNavigateTab('feed');
+                } else {
+                  setActiveSubScreen('scrap');
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.portalIconBox, { backgroundColor: 'rgba(255, 145, 0, 0.16)' }]}>
+                <Text style={styles.portalEmoji}>♻️</Text>
+              </View>
+              <View style={styles.portalTextCol}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.portalTitle, { color: theme.textPrimary }]}>Kabadiwala Scrap Radar</Text>
+                  <View style={{ backgroundColor: 'rgba(255, 145, 0, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#FF9100' }}>ACTIVE ROLE</Text>
+                  </View>
+                </View>
+                <Text style={[styles.portalSubtitle, { color: theme.textSecondary }]}>
+                  Replaces Nearby Feed • Tap to open Scrap Radar workspace
+                </Text>
+              </View>
+              <Text style={[styles.portalArrow, { color: '#FF9100' }]}>➔</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Government Swachh Survekshan Official Cleanliness Ranking Card */}
         <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>
@@ -398,96 +778,100 @@ export default function MenuScreen({
           </View>
         </View>
 
-        {/* Secure karma rewards: shown only to an authenticated Google user. */}
-        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>KARMA BOOSTERS</Text>
-        {user ? (
-          <View style={[styles.boosterCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
-            {!user.welcomeClaimedAt && (
-              <TouchableOpacity
-                style={[styles.welcomeReward, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
-                onPress={handleClaimWelcome}
-                disabled={isClaimingWelcome}
-                activeOpacity={0.85}
-              >
-                <View style={styles.boosterTextCol}>
-                  <Text style={[styles.boosterTitle, { color: theme.primary }]}>Welcome to NearBin · +500 Karma</Text>
-                  <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Claim your one-time citizen welcome reward.</Text>
+        {/* Secure karma rewards: shown only to citizens (anonymous or authenticated citizen). Hidden for Govt & Kabadiwala */}
+        {(!user || user?.role === 'citizen') && (
+          <>
+            <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>KARMA BOOSTERS</Text>
+            {user ? (
+              <View style={[styles.boosterCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
+                {!(user?.welcomeClaimedAt || welcomeClaimedLocal) && (
+                  <TouchableOpacity
+                    style={[styles.welcomeReward, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}
+                    onPress={handleClaimWelcome}
+                    disabled={isClaimingWelcome}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.boosterTextCol}>
+                      <Text style={[styles.boosterTitle, { color: theme.primary }]}>Welcome to NearBin · +500 Karma</Text>
+                      <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Claim your one-time citizen welcome reward.</Text>
+                    </View>
+                    {isClaimingWelcome ? <ActivityIndicator color={theme.primary} /> : <Text style={[styles.claimText, { color: theme.primary }]}>Claim</Text>}
+                  </TouchableOpacity>
+                )}
+
+                {/* Dedicated Referral Invite System with unique link and instant reward */}
+                <View style={[styles.referralCardBox, { backgroundColor: isDark ? '#0F291E' : '#F0FDF4', borderColor: isDark ? '#166534' : '#BBF7D0' }]}>
+                  <View style={styles.referralHeaderRow}>
+                    <View style={[styles.referralIconCircle, { backgroundColor: isDark ? '#14532D' : '#DCFCE7' }]}>
+                      <Text style={{ fontSize: 18 }}>🤝</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.referralTitle, { color: theme.textPrimary }]}>Invite Friends & Earn Karma</Text>
+                      <Text style={[styles.referralBadgeText, { color: isDark ? '#4ADE80' : '#15803D' }]}>
+                        +300 for friend • +100 for you
+                      </Text>
+                    </View>
+                    <View style={[styles.referralCodeBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
+                      <Text style={[styles.referralCodeBadgeText, { color: theme.primary }]}>
+                        {KarmaService.getReferralCode(user)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.referralDescription, { color: theme.textSecondary }]}>
+                    Share your personal link. New users joining via your link receive <Text style={{ fontWeight: '800', color: theme.primary }}>300 Karma points</Text>, and you receive <Text style={{ fontWeight: '800', color: theme.primary }}>+100 Karma points</Text> credited to your profile!
+                  </Text>
+
+                  {/* Unique Referral Link Box with Copy Button */}
+                  <View style={[styles.referralLinkContainer, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+                    <Text numberOfLines={1} style={[styles.referralLinkText, { color: theme.textPrimary }]}>
+                      {KarmaService.referralUrl(user)}
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.referralCopyBtn, { backgroundColor: copiedReferral ? '#16A34A' : theme.primary }]}
+                      onPress={handleCopyReferral}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.referralCopyBtnText}>{copiedReferral ? '✓ Copied!' : '📋 Copy'}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Stats & Share Action Row */}
+                  <View style={styles.referralFooterRow}>
+                    <View style={styles.referralStatsPill}>
+                      <Text style={[styles.referralStatsText, { color: theme.textSecondary }]}>
+                        Friends: <Text style={{ fontWeight: '800', color: theme.primary }}>{referralStats.friendsJoined}</Text>  |  Earned: <Text style={{ fontWeight: '800', color: theme.primary }}>+{referralStats.karmaEarned} pts</Text>
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.referralShareBtn, { backgroundColor: theme.primary }]}
+                      onPress={handleShareReferral}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.referralShareBtnText}>Share Link ↗</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                {isClaimingWelcome ? <ActivityIndicator color={theme.primary} /> : <Text style={[styles.claimText, { color: theme.primary }]}>Claim</Text>}
+
+                <View style={[styles.adNotice, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+                  <Text style={styles.settingEmoji}>🎬</Text>
+                  <View style={styles.boosterTextCol}>
+                    <Text style={[styles.boosterTitle, { color: theme.textPrimary }]}>More boosters · +100 Karma</Text>
+                    <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Rewarded ads will be available in the upcoming Android app build. Web ads do not grant points.</Text>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity style={[styles.settingRowCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]} onPress={onRequireAuth} activeOpacity={0.8}>
+                <View style={styles.settingTextCol}>
+                  <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>Sign in to earn Karma</Text>
+                  <Text style={[styles.settingSub, { color: theme.textSecondary }]}>Your rewards and referral link are protected by your Google account.</Text>
+                </View>
+                <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
               </TouchableOpacity>
             )}
-
-            {/* Dedicated Referral Invite System with unique link and instant reward */}
-            <View style={[styles.referralCardBox, { backgroundColor: isDark ? '#0F291E' : '#F0FDF4', borderColor: isDark ? '#166534' : '#BBF7D0' }]}>
-              <View style={styles.referralHeaderRow}>
-                <View style={[styles.referralIconCircle, { backgroundColor: isDark ? '#14532D' : '#DCFCE7' }]}>
-                  <Text style={{ fontSize: 18 }}>🤝</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.referralTitle, { color: theme.textPrimary }]}>Invite Friends & Earn Karma</Text>
-                  <Text style={[styles.referralBadgeText, { color: isDark ? '#4ADE80' : '#15803D' }]}>
-                    +300 for friend • +100 for you
-                  </Text>
-                </View>
-                <View style={[styles.referralCodeBadge, { backgroundColor: theme.primaryContainer, borderColor: theme.primary }]}>
-                  <Text style={[styles.referralCodeBadgeText, { color: theme.primary }]}>
-                    {KarmaService.getReferralCode(user)}
-                  </Text>
-                </View>
-              </View>
-
-              <Text style={[styles.referralDescription, { color: theme.textSecondary }]}>
-                Share your personal link. New users joining via your link receive <Text style={{ fontWeight: '800', color: theme.primary }}>300 Karma points</Text>, and you receive <Text style={{ fontWeight: '800', color: theme.primary }}>+100 Karma points</Text> credited to your profile!
-              </Text>
-
-              {/* Unique Referral Link Box with Copy Button */}
-              <View style={[styles.referralLinkContainer, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
-                <Text numberOfLines={1} style={[styles.referralLinkText, { color: theme.textPrimary }]}>
-                  {KarmaService.referralUrl(user)}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.referralCopyBtn, { backgroundColor: copiedReferral ? '#16A34A' : theme.primary }]}
-                  onPress={handleCopyReferral}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.referralCopyBtnText}>{copiedReferral ? '✓ Copied!' : '📋 Copy'}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Stats & Share Action Row */}
-              <View style={styles.referralFooterRow}>
-                <View style={styles.referralStatsPill}>
-                  <Text style={[styles.referralStatsText, { color: theme.textSecondary }]}>
-                    Friends: <Text style={{ fontWeight: '800', color: theme.primary }}>{referralStats.friendsJoined}</Text>  |  Earned: <Text style={{ fontWeight: '800', color: theme.primary }}>+{referralStats.karmaEarned} pts</Text>
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.referralShareBtn, { backgroundColor: theme.primary }]}
-                  onPress={handleShareReferral}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.referralShareBtnText}>Share Link ↗</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={[styles.adNotice, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
-              <Text style={styles.settingEmoji}>🎬</Text>
-              <View style={styles.boosterTextCol}>
-                <Text style={[styles.boosterTitle, { color: theme.textPrimary }]}>More boosters · +100 Karma</Text>
-                <Text style={[styles.boosterSub, { color: theme.textSecondary }]}>Rewarded ads will be available in the upcoming Android app build. Web ads do not grant points.</Text>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <TouchableOpacity style={[styles.settingRowCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]} onPress={onRequireAuth} activeOpacity={0.8}>
-            <View style={styles.settingTextCol}>
-              <Text style={[styles.settingTitle, { color: theme.textPrimary }]}>Sign in to earn Karma</Text>
-              <Text style={[styles.settingSub, { color: theme.textSecondary }]}>Your rewards and referral link are protected by your Google account.</Text>
-            </View>
-            <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
-          </TouchableOpacity>
+          </>
         )}
 
         {/* 1. Theme Setting: Dark / Light Mode */}
@@ -553,46 +937,7 @@ export default function MenuScreen({
           </TouchableOpacity>
         )}
 
-        {/* 2. Operational Portals (Government & Recycler) */}
-        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>OPERATIONAL PANELS</Text>
-        
-        {/* Government Safai Mitra Portal Button */}
-        <TouchableOpacity
-          style={[styles.portalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}
-          onPress={() => setActiveSubScreen('worker')}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.portalIconBox, { backgroundColor: 'rgba(0, 230, 118, 0.15)' }]}>
-            <Text style={styles.portalEmoji}>🚜</Text>
-          </View>
-          <View style={styles.portalTextCol}>
-            <Text style={[styles.portalTitle, { color: theme.textPrimary }]}>Govt Safai Mitra Portal</Text>
-            <Text style={[styles.portalSubtitle, { color: theme.textSecondary }]}>
-              Municipal sanitation squad tasks, cleanup & proof
-            </Text>
-          </View>
-          <Text style={[styles.portalArrow, { color: theme.primary }]}>➔</Text>
-        </TouchableOpacity>
-
-        {/* Kabadiwala / Scrap Recycler Radar Button */}
-        <TouchableOpacity
-          style={[styles.portalCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}
-          onPress={() => setActiveSubScreen('scrap')}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.portalIconBox, { backgroundColor: 'rgba(255, 145, 0, 0.15)' }]}>
-            <Text style={styles.portalEmoji}>♻️</Text>
-          </View>
-          <View style={styles.portalTextCol}>
-            <Text style={[styles.portalTitle, { color: theme.textPrimary }]}>Kabadiwala Scrap Radar</Text>
-            <Text style={[styles.portalSubtitle, { color: theme.textSecondary }]}>
-              High-value cardboard, metal & plastic collection
-            </Text>
-          </View>
-          <Text style={[styles.portalArrow, { color: theme.catScrap }]}>➔</Text>
-        </TouchableOpacity>
-
-        {/* 3. About Earth Relief India & Founder Spotlight */}
+        {/* About Earth Relief India & Founder Spotlight */}
         <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>ABOUT & MISSION</Text>
         <TouchableOpacity
           style={[styles.brandHighlightCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}
@@ -644,20 +989,28 @@ export default function MenuScreen({
           </View>
         </TouchableOpacity>
 
-        {/* City Stats */}
-        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>CITY IMPACT</Text>
+        {/* City Stats - dynamically calculated from live reports and database */}
+        <Text style={[styles.sectionHeading, { color: theme.textMuted }]}>CITY IMPACT & LIVE METRICS</Text>
         <View style={[styles.statsCard, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
           <View style={styles.statLine}>
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Total Hotspots Logged</Text>
-            <Text style={[styles.statValue, { color: theme.textPrimary }]}>{stats?.totalSpots || 6}</Text>
+            <Text style={[styles.statValue, { color: theme.textPrimary }]}>{totalHotspots}</Text>
           </View>
           <View style={styles.statLine}>
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Sites Sanitized & Cleared</Text>
-            <Text style={[styles.statValue, { color: theme.primary }]}>{stats?.cleanedSpots || 2}</Text>
+            <Text style={[styles.statValue, { color: theme.primary }]}>{cleanedSpots}</Text>
+          </View>
+          <View style={styles.statLine}>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>In-Progress Operations</Text>
+            <Text style={[styles.statValue, { color: theme.secondary }]}>{inProgressSpots}</Text>
           </View>
           <View style={styles.statLine}>
             <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Recyclables Diverted</Text>
-            <Text style={[styles.statValue, { color: theme.catScrap }]}>{stats?.recyclablesDiverted || 4}</Text>
+            <Text style={[styles.statValue, { color: theme.catScrap }]}>{recyclablesDiverted}</Text>
+          </View>
+          <View style={[styles.statLine, { borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 8, marginTop: 4 }]}>
+            <Text style={[styles.statLabel, { color: theme.textPrimary, fontWeight: '700' }]}>Cleanliness Resolution Rate</Text>
+            <Text style={[styles.statValue, { color: theme.primary, fontWeight: '800' }]}>{cleanRate}%</Text>
           </View>
         </View>
 
@@ -772,6 +1125,77 @@ export default function MenuScreen({
                 placeholder="e.g. Ward 14, Lajpat Nagar"
                 placeholderTextColor={theme.textMuted}
               />
+
+              {/* Account Role (Permanently Locked to Google Account Registration) */}
+              <Text style={[styles.inputLabel, { color: theme.textMuted }]}>ACCOUNT ROLE & PERMISSIONS (LOCKED)</Text>
+              <View style={[styles.lockedRoleBox, { backgroundColor: theme.surfaceVariant, borderColor: theme.border }]}>
+                <Text style={styles.lockedRoleIcon}>
+                  {user?.role === 'worker' ? '🏛️' : user?.role === 'scrap_picker' ? '♻️' : '👤'}
+                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.lockedRoleTitle, { color: theme.textPrimary }]}>
+                    {user?.role === 'worker' ? 'Government Official / Safai Mitra' : user?.role === 'scrap_picker' ? 'Kabadiwala / Scrap Recycler' : 'Citizen'}
+                  </Text>
+                  <Text style={[styles.lockedRoleSub, { color: theme.textMuted }]}>
+                    🔒 Role is permanently registered to your Google account
+                  </Text>
+                </View>
+              </View>
+
+              {/* Mandatory Government Official Credentials */}
+              {user?.role === 'worker' && (
+                <View style={[styles.govFormSection, { borderColor: '#00B0FF', backgroundColor: isDark ? 'rgba(0, 176, 255, 0.08)' : '#F0F9FF' }]}>
+                  <View style={styles.govFormHeader}>
+                    <Text style={styles.govFormHeaderIcon}>🏛️</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.govFormHeaderTitle, { color: '#00B0FF' }]}>Government Official Credentials</Text>
+                      <Text style={[styles.govFormSub, { color: theme.textSecondary }]}>
+                        Mandatory fields to verify municipal authority for sanitation & proof uploads.
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Official Designation */}
+                  <Text style={[styles.inputLabel, { color: theme.textMuted, marginTop: 10 }]}>OFFICIAL DESIGNATION *</Text>
+                  <TextInput
+                    style={[styles.inputField, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+                    value={editDesignation}
+                    onChangeText={setEditDesignation}
+                    placeholder="e.g. Ward Sanitation Inspector / Sanitary Superintendent"
+                    placeholderTextColor={theme.textMuted}
+                  />
+
+                  {/* Department */}
+                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>DEPARTMENT / MUNICIPAL BODY *</Text>
+                  <TextInput
+                    style={[styles.inputField, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+                    value={editDepartment}
+                    onChangeText={setEditDepartment}
+                    placeholder="e.g. Nagar Nigam Solid Waste Management"
+                    placeholderTextColor={theme.textMuted}
+                  />
+
+                  {/* Employee ID */}
+                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>GOVT EMPLOYEE ID / BADGE NO. *</Text>
+                  <TextInput
+                    style={[styles.inputField, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+                    value={editEmployeeId}
+                    onChangeText={setEditEmployeeId}
+                    placeholder="e.g. GOV-NN-2026-981"
+                    placeholderTextColor={theme.textMuted}
+                  />
+
+                  {/* Duty Role / Specialty */}
+                  <Text style={[styles.inputLabel, { color: theme.textMuted }]}>DUTY ROLE / SPECIALTY</Text>
+                  <TextInput
+                    style={[styles.inputField, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.textPrimary }]}
+                    value={editGovRole}
+                    onChangeText={setEditGovRole}
+                    placeholder="e.g. Ground Operations & Disposal Squad"
+                    placeholderTextColor={theme.textMuted}
+                  />
+                </View>
+              )}
 
               {/* Action Buttons */}
               <View style={styles.sheetBtnRow}>
@@ -940,27 +1364,27 @@ export default function MenuScreen({
         </View>
       </Modal>
 
-      {/* Sub-Screen Modal: Govt Safai Mitra */}
-      <Modal visible={activeSubScreen === 'worker'} animationType="slide">
+      {/* Sub-Screen Modal: Govt Safai Mitra - Strictly role-restricted to Government Workers */}
+      <Modal visible={activeSubScreen === 'worker' && user?.role === 'worker'} animationType="slide">
         <View style={{ flex: 1, backgroundColor: theme.background }}>
           <View style={[styles.subModalHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             <TouchableOpacity onPress={() => setActiveSubScreen(null)} style={styles.backBtn}>
               <Text style={[styles.backBtnText, { color: theme.textPrimary }]}>← Back to Menu</Text>
             </TouchableOpacity>
           </View>
-          <WorkerScreen hotspots={hotspots} onUpdateStatus={onUpdateStatus} />
+          <WorkerScreen hotspots={hotspots} onUpdateStatus={onUpdateStatus} user={user} />
         </View>
       </Modal>
 
-      {/* Sub-Screen Modal: Kabadiwala Scrap Radar */}
-      <Modal visible={activeSubScreen === 'scrap'} animationType="slide">
+      {/* Sub-Screen Modal: Kabadiwala Scrap Radar - Strictly role-restricted to Scrap Recyclers */}
+      <Modal visible={activeSubScreen === 'scrap' && user?.role === 'scrap_picker'} animationType="slide">
         <View style={{ flex: 1, backgroundColor: theme.background }}>
           <View style={[styles.subModalHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
             <TouchableOpacity onPress={() => setActiveSubScreen(null)} style={styles.backBtn}>
               <Text style={[styles.backBtnText, { color: theme.textPrimary }]}>← Back to Menu</Text>
             </TouchableOpacity>
           </View>
-          <ScrapPickerScreen hotspots={hotspots} onClaimRecyclables={onClaimRecyclables} />
+          <ScrapPickerScreen hotspots={hotspots} onClaimRecyclables={onClaimRecyclables} user={user} />
         </View>
       </Modal>
 
@@ -1178,6 +1602,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2,
   },
+  roleBadgeBox: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
   editProfileBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -1235,6 +1669,66 @@ const styles = StyleSheet.create({
   },
   karmaDivider: {
     width: 1,
+  },
+  profileRoleBox: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+    marginTop: 10,
+  },
+  profileRoleTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  profileRoleHeader: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  activeRoleTag: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  activeRoleTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  profileRoleGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  profileRoleCard: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  profileRoleCardIcon: {
+    fontSize: 18,
+    marginBottom: 2,
+  },
+  profileRoleCardTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  profileRoleCardSub: {
+    fontSize: 9,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  profileRoleActiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    position: 'absolute',
+    top: 5,
+    right: 5,
   },
   boosterCard: {
     borderWidth: 1,
@@ -1999,6 +2493,100 @@ const styles = StyleSheet.create({
   govPortalBtnText: {
     fontSize: 11,
     fontWeight: '800',
+  },
+  // Government credentials card & locked role styles
+  govCredBox: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 12,
+    marginBottom: 14,
+    gap: 10,
+  },
+  govCredTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  govBadgeSmall: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  govCredFieldsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  govCredFieldLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+  },
+  govCredFieldValue: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  govIncompleteWarningBtn: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginTop: 2,
+  },
+  govIncompleteWarningBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  lockedRoleBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  lockedRoleIcon: {
+    fontSize: 24,
+  },
+  lockedRoleTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  lockedRoleSub: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  govFormSection: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 16,
+    gap: 8,
+  },
+  govFormHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  govFormHeaderIcon: {
+    fontSize: 22,
+  },
+  govFormHeaderTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  govFormSub: {
+    fontSize: 11,
+    lineHeight: 15,
   },
 });
 

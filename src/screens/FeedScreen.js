@@ -45,6 +45,9 @@ export default function FeedScreen({
   userLocation,
   onOpenReport,
   votedHotspotIds = [],
+  user,
+  onRefresh,
+  isRefreshing = false,
 }) {
   const [selectedHotspot, setSelectedHotspot] = useState(null);
   const [selectedRadius, setSelectedRadius] = useState('all'); // 'all' | '500m' | '1km' | '5km' | '10km'
@@ -72,6 +75,8 @@ export default function FeedScreen({
   const renderItem = ({ item }) => {
     const cat = CategoryMeta[item.category] || CategoryMeta.plastic;
     const isCleaned = item.status === 'cleaned';
+    const isInProgress = item.status === 'in_progress';
+    const isRecycledPickedUp = item.status === 'recycled_picked_up' || Boolean(item.claimedBy);
 
     return (
       <TouchableOpacity
@@ -93,6 +98,14 @@ export default function FeedScreen({
             {isCleaned ? (
               <View style={[styles.badge, { backgroundColor: theme.lowContainer, borderColor: theme.low }]}>
                 <Text style={[styles.badgeText, { color: theme.low }]}>✨ CLEANED</Text>
+              </View>
+            ) : isRecycledPickedUp ? (
+              <View style={[styles.badge, { backgroundColor: 'rgba(255, 145, 0, 0.18)', borderColor: '#FF9100' }]}>
+                <Text style={[styles.badgeText, { color: '#FF9100' }]}>♻️ RECYCLED PICKED UP</Text>
+              </View>
+            ) : isInProgress ? (
+              <View style={[styles.badge, { backgroundColor: 'rgba(0, 176, 255, 0.18)', borderColor: '#00B0FF' }]}>
+                <Text style={[styles.badgeText, { color: '#00B0FF' }]}>🚜 IN PROGRESS</Text>
               </View>
             ) : (
               <View
@@ -118,6 +131,11 @@ export default function FeedScreen({
           <Text style={[styles.cardTitle, { color: theme.textPrimary }]} numberOfLines={2}>
             {item.title}
           </Text>
+          {isRecycledPickedUp && !isCleaned && (
+            <Text style={{ fontSize: 11, color: '#FF9100', fontWeight: '700', marginBottom: 2 }}>
+              📦 Picked up by {item.claimedBy || 'Kabadiwala'}
+            </Text>
+          )}
           <View style={styles.addressRow}>
             <Text style={[styles.cardAddress, { color: theme.textMuted, flex: 1 }]} numberOfLines={1}>
               📍 {item.address}
@@ -177,10 +195,31 @@ export default function FeedScreen({
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <Text style={[styles.screenTitle, { color: theme.textPrimary }]}>Nearby Waste Feed</Text>
-        <Text style={[styles.screenSubtitle, { color: theme.textSecondary }]}>
-          Community-verified dumpsites in your area
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.screenTitle, { color: theme.textPrimary }]}>Nearby Waste Feed</Text>
+            <Text style={[styles.screenSubtitle, { color: theme.textSecondary }]}>
+              Community-verified dumpsites in your area
+            </Text>
+          </View>
+          {onRefresh && (
+            <TouchableOpacity
+              onPress={onRefresh}
+              activeOpacity={0.7}
+              style={[
+                styles.liveSyncBadge,
+                {
+                  backgroundColor: isDark ? 'rgba(76, 175, 80, 0.15)' : '#E8F5E9',
+                  borderColor: isDark ? '#4CAF50' : '#81C784',
+                },
+              ]}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#81C784' : '#2E7D32' }}>
+                {isRefreshing ? '🔄 Syncing...' : '🟢 Live Sync'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* 4-Tier Radius Filter Bar */}
@@ -238,6 +277,8 @@ export default function FeedScreen({
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshing={isRefreshing}
+          onRefresh={onRefresh}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -312,6 +353,7 @@ export default function FeedScreen({
         hasVoted={(votedHotspotIds || []).includes(selectedHotspot?.id)}
         onUpdateStatus={onUpdateStatus}
         onClaimRecyclables={onClaimRecyclables}
+        user={user}
       />
     </View>
   );
@@ -569,6 +611,14 @@ const styles = StyleSheet.create({
   resetRadiusText: {
     fontSize: 12,
     fontWeight: '800',
+  },
+  liveSyncBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

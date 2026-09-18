@@ -10,12 +10,12 @@ export function getApiBase() {
     return RAW_API_URL.replace(/\/+$/, '');
   }
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
-    if (window.location.port === '8081' || window.location.port === '19006') {
+    if (window.location.port && window.location.port !== '3001' && window.location.port !== '80' && window.location.port !== '443') {
       return `${window.location.protocol}//${window.location.hostname}:3001/api`;
     }
     return `${window.location.origin}/api`;
   }
-  return null;
+  return 'http://localhost:3001/api';
 }
 
 // Helper: Haversine distance in meters
@@ -367,6 +367,8 @@ export const WasteService = {
     const item = list.find(h => h.id === id);
     if (item) {
       item.claimedBy = claimedBy || 'Local Scrap Collector';
+      item.status = 'recycled_picked_up';
+      item.claimedAt = new Date().toISOString();
       await saveStoredHotspots(list);
 
       return { success: true, hotspot: item };
@@ -449,4 +451,5 @@ export const WasteService = {
     }
     return null;
   },
+  getApiBase,
 };

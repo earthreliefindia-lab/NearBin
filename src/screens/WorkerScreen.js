@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Modal, Alert, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, CategoryMeta } from '../theme/colors';
+import { Colors, DarkColors, LightColors, CategoryMeta } from '../theme/colors';
 
 const AFTER_SAMPLE_PHOTOS = [
   'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=600&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=600&auto=format&fit=crop&q=80',
 ];
 
-export default function WorkerScreen({ hotspots, onUpdateStatus }) {
+export default function WorkerScreen({ hotspots, onUpdateStatus, user, isDark }) {
+  const theme = isDark ? DarkColors : LightColors;
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [afterPhotoUri, setAfterPhotoUri] = useState(AFTER_SAMPLE_PHOTOS[0]);
@@ -48,13 +49,17 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
     }
   };
 
+  const workerOfficialAttribution = user?.designation && user?.department
+    ? `${user.name} (${user.designation}, ${user.department}${user.employeeId ? ` - ID: ${user.employeeId}` : ''})`
+    : (user?.name ? `${user.name} (Govt Safai Mitra)` : 'MCD Safai Mitra - Unit 9');
+
   const handleConfirmClean = async () => {
     if (!selectedTask) return;
     setIsLoading(true);
     try {
       await onUpdateStatus(selectedTask.id, {
         status: 'cleaned',
-        cleanedBy: 'MCD Safai Mitra - Unit 9',
+        cleanedBy: workerOfficialAttribution,
         afterPhoto: afterPhotoUri,
       });
       setIsModalVisible(false);
@@ -71,7 +76,7 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
     try {
       await onUpdateStatus(task.id, {
         status: 'in_progress',
-        cleanedBy: 'MCD Safai Mitra - Unit 9',
+        cleanedBy: workerOfficialAttribution,
       });
     } finally {
       setIsLoading(false);
@@ -82,9 +87,10 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
     const cat = CategoryMeta[item.category] || CategoryMeta.plastic;
     const isInProgress = item.status === 'in_progress';
     const isCleaned = item.status === 'cleaned';
+    const isRecycledPickedUp = item.status === 'recycled_picked_up' || Boolean(item.claimedBy);
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
         <View style={styles.cardTop}>
           <Image source={{ uri: item.beforePhoto }} style={styles.cardImg} />
           
@@ -99,6 +105,10 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
                   styles.badge,
                   isCleaned
                     ? { backgroundColor: Colors.lowContainer, borderColor: Colors.low }
+                    : isRecycledPickedUp
+                    ? { backgroundColor: 'rgba(255, 145, 0, 0.18)', borderColor: '#FF9100' }
+                    : isInProgress
+                    ? { backgroundColor: 'rgba(0, 176, 255, 0.18)', borderColor: '#00B0FF' }
                     : item.urgency === 'critical'
                     ? { backgroundColor: Colors.criticalContainer, borderColor: Colors.critical }
                     : { backgroundColor: Colors.highContainer, borderColor: Colors.high },
@@ -107,16 +117,40 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
                 <Text
                   style={[
                     styles.badgeText,
-                    { color: isCleaned ? Colors.low : item.urgency === 'critical' ? Colors.critical : Colors.high },
+                    {
+                      color: isCleaned
+                        ? Colors.low
+                        : isRecycledPickedUp
+                        ? '#FF9100'
+                        : isInProgress
+                        ? '#00B0FF'
+                        : item.urgency === 'critical'
+                        ? Colors.critical
+                        : Colors.high,
+                    },
                   ]}
                 >
-                  {isCleaned ? 'COMPLETED' : `${item.urgency.toUpperCase()} PRIORITY`}
+                  {isCleaned
+                    ? 'COMPLETED'
+                    : isRecycledPickedUp
+                    ? 'RECYCLED PICKED UP'
+                    : isInProgress
+                    ? 'IN PROGRESS'
+                    : `${item.urgency.toUpperCase()} PRIORITY`}
                 </Text>
               </View>
             </View>
 
-            <Text style={styles.taskTitle}>{item.title}</Text>
-            <Text style={styles.taskAddress}>📍 {item.address}</Text>
+            {isRecycledPickedUp && !isCleaned && (
+              <View style={styles.recycledHandoverBox}>
+                <Text style={styles.recycledHandoverText}>
+                  ♻️ Picked up by {item.claimedBy || 'Kabadiwala'}. Sanitation squad must sanitize and upload proof of work.
+                </Text>
+              </View>
+            )}
+
+            <Text style={[styles.taskTitle, { color: theme.textPrimary }]}>{item.title}</Text>
+            <Text style={[styles.taskAddress, { color: theme.textMuted }]}>📍 {item.address}</Text>
             <Text style={styles.upvoteAlert}>🔥 {item.upvotes} Citizen complaints registered</Text>
           </View>
         </View>
@@ -156,12 +190,12 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View>
-          <Text style={styles.title}>Govt Safai Mitra Panel</Text>
-          <Text style={styles.subtitle}>Municipal Corporation Sanitation Dashboard</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>Govt Safai Mitra Panel</Text>
+          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Municipal Corporation Sanitation Dashboard</Text>
         </View>
         <View style={styles.dutyBadge}>
           <Text style={styles.dutyText}>ON DUTY</Text>
@@ -169,21 +203,21 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
       </View>
 
       {/* Tab Switcher */}
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { backgroundColor: theme.surfaceVariant }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'pending' && [styles.tabActive, { backgroundColor: theme.surface }]]}
           onPress={() => setActiveTab('pending')}
         >
-          <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: theme.textMuted }, activeTab === 'pending' && [styles.tabTextActive, { color: theme.textPrimary }]]}>
             ⚠️ Pending Hotspots ({pendingTasks.length})
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'completed' && styles.tabActive]}
+          style={[styles.tab, activeTab === 'completed' && [styles.tabActive, { backgroundColor: theme.surface }]]}
           onPress={() => setActiveTab('completed')}
         >
-          <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>
+          <Text style={[styles.tabText, { color: theme.textMuted }, activeTab === 'completed' && [styles.tabTextActive, { color: theme.textPrimary }]]}>
             ✨ Resolved Sites ({completedTasks.length})
           </Text>
         </TouchableOpacity>
@@ -200,9 +234,9 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
       {/* Clean Up Proof Modal */}
       <Modal visible={isModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>📸 Upload After-Cleanup Photo</Text>
-            <Text style={styles.modalSubtitle}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>📸 Upload After-Cleanup Photo</Text>
+            <Text style={[styles.modalSubtitle, { color: theme.textSecondary }]}>
               Government compliance requires visual proof of cleaned and disinfected spot.
             </Text>
 
@@ -216,10 +250,10 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.auditInfoBox}>
-              <Text style={styles.auditText}>📌 Spot: {selectedTask?.title}</Text>
-              <Text style={styles.auditText}>📍 Address: {selectedTask?.address}</Text>
-              <Text style={styles.auditText}>⏰ Auto Timestamp: {new Date().toLocaleTimeString()}</Text>
+            <View style={[styles.auditInfoBox, { backgroundColor: theme.surfaceVariant }]}>
+              <Text style={[styles.auditText, { color: theme.textSecondary }]}>📌 Spot: {selectedTask?.title}</Text>
+              <Text style={[styles.auditText, { color: theme.textSecondary }]}>📍 Address: {selectedTask?.address}</Text>
+              <Text style={[styles.auditText, { color: theme.textSecondary }]}>⏰ Auto Timestamp: {new Date().toLocaleTimeString()}</Text>
             </View>
 
             <TouchableOpacity
@@ -238,7 +272,7 @@ export default function WorkerScreen({ hotspots, onUpdateStatus }) {
               style={styles.cancelBtn}
               onPress={() => setIsModalVisible(false)}
             >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <Text style={[styles.cancelBtnText, { color: theme.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -503,6 +537,20 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     color: Colors.textMuted,
     fontSize: 13,
+    fontWeight: '600',
+  },
+  recycledHandoverBox: {
+    backgroundColor: 'rgba(255, 145, 0, 0.12)',
+    borderWidth: 1,
+    borderColor: '#FF9100',
+    padding: 8,
+    borderRadius: 8,
+    marginVertical: 6,
+  },
+  recycledHandoverText: {
+    color: '#FF9100',
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '600',
   },
 });

@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 
@@ -159,18 +160,22 @@ class FileStorageAdapter {
     return { alreadyVoted: false, hotspot: item };
   }
 
-  async updateHotspotStatus(id, { status, cleanedBy, afterPhoto }) {
+  async updateHotspotStatus(id, { status, cleanedBy, afterPhoto, claimedBy }) {
     const item = this.hotspots.find(h => h.id === id);
     if (!item) return null;
 
     item.status = status;
-    if (status === 'cleaned') {
+    if (status === 'recycled_picked_up') {
+      item.claimedBy = claimedBy || cleanedBy || item.claimedBy || 'Local Scrap Collector';
+      item.claimedAt = new Date().toISOString();
+    } else if (status === 'cleaned') {
       item.cleanedAt = new Date().toISOString();
       item.cleanedBy = cleanedBy || 'Govt Safai Mitra Squad';
       item.afterPhoto = afterPhoto || item.afterPhoto;
       item.urgency = 'low';
     } else if (status === 'in_progress') {
       item.cleanedBy = cleanedBy || 'Govt Safai Mitra Squad';
+      item.inProgressAt = new Date().toISOString();
     }
 
     this.saveHotspots();
@@ -181,7 +186,9 @@ class FileStorageAdapter {
     const item = this.hotspots.find(h => h.id === id);
     if (!item) return null;
 
+    item.status = 'recycled_picked_up';
     item.claimedBy = claimedBy || 'Local Scrap Collector';
+    item.claimedAt = new Date().toISOString();
     this.saveHotspots();
     return item;
   }
@@ -217,6 +224,201 @@ class FileStorageAdapter {
 
   async getUserProfile(id) {
     return this.users[id] || null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Firebase Firestore Adapter — Permanent Cloud DB (never loses data on restart)
+// Set FIREBASE_SERVICE_ACCOUNT env var to a JSON string of your service account
+// ─────────────────────────────────────────────────────────────────────────────
+class FirestoreAdapter {
+  constructor(serviceAccountJson) {
+    this.name = 'firestore';
+    this.serviceAccountJson = serviceAccountJson;
+    this.db = null;
+    this.hotspotCache = []; // in-memory cache for fast reads
+    this.cacheTimestamp = 0;
+    this.CACHE_TTL_MS = 30 * 1000; // 30 seconds cache
+  }
+
+  async init() {
+    const { initializeApp, getApps, getApp, cert } = require('firebase-admin/app');
+    const { getFirestore } = require('firebase-admin/firestore');
+
+    if (!getApps().length) {
+      initializeApp({ credential: cert(this.serviceAccountJson) });
+    }
+    this.db = getFirestore(getApp());
+    this.db.settings({ ignoreUndefinedProperties: true });
+
+    // Warm up cache
+    await this._refreshCache();
+    console.log(`[DB] FirestoreAdapter ready. Loaded ${this.hotspotCache.length} hotspots from cloud.`);
+    return true;
+  }
+
+  async _refreshCache() {
+    try {
+      const snap = await this.db.collection('hotspots').orderBy('reportedAt', 'desc').limit(500).get();
+      this.hotspotCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      this.cacheTimestamp = Date.now();
+    } catch (e) {
+      console.warn('[Firestore] Cache refresh error:', e?.message);
+    }
+  }
+
+  _isCacheStale() {
+    return Date.now() - this.cacheTimestamp > this.CACHE_TTL_MS;
+  }
+
+  // saveHotspots() — no-op for Firestore (each write goes directly to cloud)
+  saveHotspots() {}
+
+  async getHotspots(filters = {}) {
+    if (this._isCacheStale()) await this._refreshCache();
+    let list = [...this.hotspotCache];
+
+    if (filters.category && filters.category !== 'all') {
+      list = list.filter(h => (h.category || '').toLowerCase() === filters.category.toLowerCase());
+    }
+    if (filters.status && filters.status !== 'all') {
+      list = list.filter(h => (h.status || '').toLowerCase() === filters.status.toLowerCase());
+    }
+    if (filters.recyclablesOnly === 'true' || filters.recyclablesOnly === true) {
+      list = list.filter(h => ['plastic', 'scrap'].includes((h.category || '').toLowerCase()) && h.status !== 'cleaned');
+    }
+    if (filters.lat && filters.lng) {
+      const uLat = parseFloat(filters.lat);
+      const uLng = parseFloat(filters.lng);
+      list = list.map(h => ({ ...h, distanceMeters: Math.round(getDistanceMeters(uLat, uLng, h.latitude, h.longitude)) }));
+      if (filters.radiusKm) {
+        const radiusM = parseFloat(filters.radiusKm) * 1000;
+        list = list.filter(h => (h.distanceMeters || 0) <= radiusM);
+      }
+      list.sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
+    }
+    return list;
+  }
+
+  async getHotspotById(id) {
+    const doc = await this.db.collection('hotspots').doc(id).get();
+    return doc.exists ? { id: doc.id, ...doc.data() } : null;
+  }
+
+  async findNearby(lat, lng, radiusMeters = 25) {
+    if (this._isCacheStale()) await this._refreshCache();
+    return this.hotspotCache.find(h => {
+      if (h.status === 'cleaned') return false;
+      return getDistanceMeters(lat, lng, h.latitude, h.longitude) <= radiusMeters;
+    }) || null;
+  }
+
+  async createHotspot(data) {
+    const ref = this.db.collection('hotspots').doc(data.id);
+    await ref.set({ ...data, createdAt: new Date().toISOString() });
+    // Update cache immediately
+    this.hotspotCache.unshift({ ...data });
+    return data;
+  }
+
+  async upvoteHotspot(id, voterId) {
+    const ref = this.db.collection('hotspots').doc(id);
+    const doc = await ref.get();
+    if (!doc.exists) return null;
+
+    const item = { id: doc.id, ...doc.data() };
+    if (!item.voters) item.voters = [];
+    if (voterId && item.voters.includes(voterId)) {
+      return { alreadyVoted: true, hotspot: item };
+    }
+    if (voterId) item.voters.push(voterId);
+    item.upvotes = (item.upvotes || 0) + 1;
+    if (item.upvotes >= 15) item.urgency = 'critical';
+    else if (item.upvotes >= 8) item.urgency = 'high';
+
+    await ref.update({ voters: item.voters, upvotes: item.upvotes, urgency: item.urgency, updatedAt: new Date().toISOString() });
+
+    // Update cache
+    const idx = this.hotspotCache.findIndex(h => h.id === id);
+    if (idx >= 0) this.hotspotCache[idx] = item;
+
+    return { alreadyVoted: false, hotspot: item };
+  }
+
+  async updateHotspotStatus(id, { status, cleanedBy, afterPhoto }) {
+    const ref = this.db.collection('hotspots').doc(id);
+    const doc = await ref.get();
+    if (!doc.exists) return null;
+
+    const item = { id: doc.id, ...doc.data() };
+    const update = { status, updatedAt: new Date().toISOString() };
+
+    if (status === 'cleaned') {
+      update.cleanedAt = new Date().toISOString();
+      update.cleanedBy = cleanedBy || 'Govt Safai Mitra Squad';
+      update.afterPhoto = afterPhoto || item.afterPhoto || null;
+      update.urgency = 'low';
+    } else if (status === 'in_progress') {
+      update.cleanedBy = cleanedBy || 'Govt Safai Mitra Squad';
+      update.inProgressAt = new Date().toISOString();
+    }
+
+    await ref.update(update);
+    const updated = { ...item, ...update };
+
+    // Update cache
+    const idx = this.hotspotCache.findIndex(h => h.id === id);
+    if (idx >= 0) this.hotspotCache[idx] = updated;
+
+    return updated;
+  }
+
+  async claimHotspot(id, claimedBy) {
+    const ref = this.db.collection('hotspots').doc(id);
+    const doc = await ref.get();
+    if (!doc.exists) return null;
+
+    const update = {
+      status: 'recycled_picked_up',
+      claimedBy: claimedBy || 'Local Scrap Collector',
+      claimedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await ref.update(update);
+    const updated = { id: doc.id, ...doc.data(), ...update };
+
+    // Update cache
+    const idx = this.hotspotCache.findIndex(h => h.id === id);
+    if (idx >= 0) this.hotspotCache[idx] = updated;
+
+    return updated;
+  }
+
+  async getStats() {
+    if (this._isCacheStale()) await this._refreshCache();
+    const list = this.hotspotCache;
+    const total = list.length;
+    const cleaned = list.filter(h => h.status === 'cleaned').length;
+    return {
+      totalSpots: total,
+      cleanedSpots: cleaned,
+      inProgressSpots: list.filter(h => h.status === 'in_progress').length,
+      pendingSpots: list.filter(h => h.status === 'reported').length,
+      recyclablesDiverted: list.filter(h => ['plastic', 'scrap'].includes((h.category || '').toLowerCase())).length,
+      cleanRatePercentage: total > 0 ? Math.round((cleaned / total) * 100) : 0,
+    };
+  }
+
+  async upsertUserProfile(userData) {
+    const ref = this.db.collection('users').doc(userData.id);
+    const updated = { ...userData, updatedAt: new Date().toISOString() };
+    await ref.set(updated, { merge: true });
+    return updated;
+  }
+
+  async getUserProfile(id) {
+    const doc = await this.db.collection('users').doc(id).get();
+    return doc.exists ? { id: doc.id, ...doc.data() } : null;
   }
 }
 
@@ -517,23 +719,48 @@ class PostgresStorageAdapter {
   }
 }
 
-// -------------------------------------------------------------
-// Initialize Database Service
-// -------------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
+// Initialize Database — Priority: Firestore → PostgreSQL → JSON File
+// ─────────────────────────────────────────────────────────────────────────────
 async function initDatabase() {
+  // 1. Firebase Firestore (permanent cloud DB — recommended for Hostinger/Render)
+  const firebaseServiceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (firebaseServiceAccountRaw) {
+    try {
+      console.log('[DB] Attempting Firebase Firestore connection...');
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(firebaseServiceAccountRaw);
+      } catch (parseErr) {
+        console.warn('[DB] FIREBASE_SERVICE_ACCOUNT is not valid JSON:', parseErr?.message);
+        throw parseErr;
+      }
+      const firestoreAdapter = new FirestoreAdapter(serviceAccount);
+      await firestoreAdapter.init();
+      dbAdapter = firestoreAdapter;
+      console.log('[DB] ✅ Firebase Firestore active — data is permanently stored in cloud.');
+      return dbAdapter;
+    } catch (err) {
+      console.warn('[DB] Firestore initialization failed, trying PostgreSQL:', err?.message);
+    }
+  }
+
+  // 2. PostgreSQL (production DB via DATABASE_URL)
   if (DATABASE_URL) {
     try {
       console.log('[DB] Attempting PostgreSQL connection via DATABASE_URL...');
       const pgAdapter = new PostgresStorageAdapter(DATABASE_URL);
       await pgAdapter.init();
       dbAdapter = pgAdapter;
-      console.log('[DB] PostgreSQL active and connected.');
+      console.log('[DB] ✅ PostgreSQL active and connected.');
       return dbAdapter;
     } catch (err) {
       console.warn('[DB] PostgreSQL initialization failed, falling back to FileStorageAdapter:', err?.message);
     }
   }
 
+  // 3. JSON File (local fallback — data resets on server restart)
+  console.warn('[DB] ⚠️  Using local JSON file storage. Set FIREBASE_SERVICE_ACCOUNT for permanent cloud storage.');
   const fileAdapter = new FileStorageAdapter();
   await fileAdapter.init();
   dbAdapter = fileAdapter;

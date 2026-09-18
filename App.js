@@ -25,6 +25,8 @@ import { KarmaService } from './src/services/karmaService';
 // Screens & Modals
 import MapScreen from './src/screens/MapScreen';
 import FeedScreen from './src/screens/FeedScreen';
+import WorkerScreen from './src/screens/WorkerScreen';
+import ScrapPickerScreen from './src/screens/ScrapPickerScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import AuthModal from './src/components/AuthModal';
 import OnboardingModal from './src/components/OnboardingModal';
@@ -71,16 +73,23 @@ export default function App() {
         },
       };
 
-  // Load hotspots & stats
-  const loadData = async (coords = null) => {
+  // Load hotspots & stats with silent background option
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadData = async (coords = null, silent = false) => {
     try {
+      if (!silent) setIsRefreshing(true);
       const loc = coords || userLocation;
       const data = await WasteService.getHotspots({ lat: loc.latitude, lng: loc.longitude });
-      setHotspots(data || []);
+      if (Array.isArray(data)) {
+        setHotspots(data);
+      }
       const s = await WasteService.getStats();
-      setStats(s?.stats || null);
+      if (s?.stats) setStats(s.stats);
     } catch (e) {
       console.log('Error loading data:', e);
+    } finally {
+      if (!silent) setIsRefreshing(false);
     }
   };
 
@@ -148,10 +157,19 @@ export default function App() {
       try {
         const redirectLogin = await FirebaseAuthService.getRedirectedGoogleUser();
         if (redirectLogin?.success && redirectLogin.user) {
-          setUser(redirectLogin.user);
-          await AsyncStorage.setItem('@nearbin_user', JSON.stringify(redirectLogin.user));
-          WasteService.saveProfile(redirectLogin.user).catch(() => {});
-          checkPendingReferral(redirectLogin.user);
+          let role = redirectLogin.user.role;
+          if (!role) {
+            try {
+              role = (await AsyncStorage.getItem('@nearbin_selected_role')) || 'citizen';
+            } catch (e) {
+              role = 'citizen';
+            }
+          }
+          const userWithRole = { ...redirectLogin.user, role };
+          setUser(userWithRole);
+          await AsyncStorage.setItem('@nearbin_user', JSON.stringify(userWithRole));
+          WasteService.saveProfile(userWithRole).catch(() => {});
+          checkPendingReferral(userWithRole);
         } else {
           const saved = await AsyncStorage.getItem('@nearbin_user');
           if (saved) {
@@ -213,6 +231,58 @@ export default function App() {
           .catch((err) => console.log('[NearBin PWA] SW registration notice:', err?.message));
       });
     }
+
+    // 4. Live Real-Time Feed Synchronization — Instant SSE push + 2-second polling fallback
+    let eventSource = null;
+    let syncInterval = null;
+
+    try {
+      const apiBase = WasteService.getApiBase();
+      if (apiBase && Platform.OS === 'web' && typeof window !== 'undefined' && typeof EventSource !== 'undefined') {
+        eventSource = new EventSource(`${apiBase}/events`);
+        eventSource.onmessage = (e) => {
+          try {
+            const msg = JSON.parse(e.data);
+            const currentRole = user?.role || 'citizen';
+
+            // Filter events by role so each user gets only relevant updates
+            if (msg.type === 'hotspots_updated') {
+              // Citizens see all updates; workers see status changes + new reports
+              if (!msg.targetRole || msg.targetRole === 'all' || msg.targetRole === currentRole) {
+                console.log(`[Realtime] Feed update → action=${msg.action} role=${currentRole}`);
+                loadData(null, true);
+              }
+            }
+            if (msg.type === 'recyclable_added' && currentRole === 'scrap_picker') {
+              // Scrap pickers get instant notification of new recyclable spots
+              console.log('[Realtime] New recyclable spot added — refreshing scrap radar...');
+              loadData(null, true);
+            }
+          } catch (err) {}
+        };
+        eventSource.onerror = () => {
+          // Browser handles automatic reconnect
+        };
+      }
+    } catch (err) {
+      console.warn('[Realtime] EventSource init notice:', err?.message);
+    }
+
+    // High-reliability 2-second polling fallback — all roles see instant updates
+    syncInterval = setInterval(() => {
+      loadData(null, true);
+    }, 2000);
+
+    return () => {
+      if (eventSource) {
+        try {
+          eventSource.close();
+        } catch (e) {}
+      }
+      if (syncInterval) {
+        clearInterval(syncInterval);
+      }
+    };
   }, []);
 
   // Recenter button trigger
@@ -289,37 +359,84 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('@nearbin_user');
-      await FirebaseAuthService.signOut();
-    } catch (e) {}
+      await AsyncStorage.removeItem('@nearbin_selected_role');
+      if (FirebaseAuthService && typeof FirebaseAuthService.signOut === 'function') {
+        await FirebaseAuthService.signOut();
+      }
+      if (SupabaseAuthService && typeof SupabaseAuthService.signOut === 'function') {
+        await SupabaseAuthService.signOut();
+      }
+    } catch (e) {
+      console.log('Signout error:', e);
+    }
     setUser(null);
+    setCurrentTab('map');
     setAuthModalVisible(true);
   };
 
   const handleClaimWelcomeBonus = async () => {
+    if (user && user.role !== 'citizen') {
+      Alert.alert('Notice', 'Welcome karma rewards are exclusively available for citizen accounts.');
+      return null;
+    }
     const result = await KarmaService.claimWelcomeBonus(user);
     if (result && result.user) {
-      setUser(result.user);
-      await AsyncStorage.setItem('@nearbin_user', JSON.stringify(result.user));
+      const fresh = { ...result.user };
+      setUser(fresh);
+      try {
+        await AsyncStorage.setItem('@nearbin_user', JSON.stringify(fresh));
+        await WasteService.saveProfile(fresh);
+      } catch (e) {}
     }
     return result;
   };
 
   const handleShareReferral = async () => KarmaService.shareReferral(user);
 
-  // Citizen report submit with character-based Karma rewards
+  // Citizen report submit with character-based Karma rewards (Citizens only)
   const handleSubmitReport = async (reportData) => {
+    const isCitizen = !user || user.role === 'citizen';
     const charCount = reportData.characterCount ?? (reportData.description || '').trim().length;
     const notesBonus = Math.round(charCount * 0.5);
-    const earnedKarma = reportData.notesKarma || (50 + notesBonus);
+    const earnedKarma = isCitizen ? (reportData.notesKarma || (50 + notesBonus)) : 0;
+
+    // ── OPTIMISTIC UPDATE: Add report to local state immediately ──────────────
+    // This makes govt employees and recyclers see the new report INSTANTLY
+    // without waiting for server confirmation (server will sync in background)
+    const optimisticReport = {
+      id: reportData.id || `nb-${Date.now().toString(36)}`,
+      title: reportData.title || `${(reportData.category || 'Waste').toUpperCase()} Dump Reported`,
+      description: reportData.description || 'Reported by citizen.',
+      category: (reportData.category || 'plastic').toLowerCase(),
+      status: 'reported',
+      urgency: 'medium',
+      upvotes: 1,
+      latitude: parseFloat(reportData.latitude) || 28.5672,
+      longitude: parseFloat(reportData.longitude) || 77.2435,
+      address: reportData.address || 'GPS verified',
+      beforePhoto: reportData.beforePhoto || null,
+      afterPhoto: null,
+      photos: reportData.photos || [],
+      reportedBy: user?.name || 'Concerned Citizen',
+      reportedAt: new Date().toISOString(),
+      karmaAwarded: earnedKarma,
+    };
+    // Instantly push to the hotspots list visible to all roles
+    setHotspots(prev => {
+      const alreadyExists = prev.some(h => h.id === optimisticReport.id);
+      return alreadyExists ? prev : [optimisticReport, ...prev];
+    });
+    // ──────────────────────────────────────────────────────────────────────────
 
     const result = await WasteService.submitReport({
       ...reportData,
-      reportedBy: user?.name || 'Citizen',
+      id: optimisticReport.id,
+      reportedBy: user?.name || (user?.role === 'worker' ? 'Govt Official' : user?.role === 'scrap_picker' ? 'Kabadiwala' : 'Citizen'),
       karmaAwarded: earnedKarma,
     });
 
     if (user) {
-      const nextKarma = (user.karma || 0) + earnedKarma;
+      const nextKarma = isCitizen ? (user.karma || 0) + earnedKarma : (user.karma || 0);
       const nextReports = (user.verifiedReports || 0) + 1;
       const updatedUser = {
         ...user,
@@ -331,17 +448,30 @@ export default function App() {
       WasteService.saveProfile(updatedUser).catch(() => {});
     }
 
-    await loadData();
+    // Replace optimistic entry with real server response if available
+    if (result?.hotspot) {
+      setHotspots(prev => prev.map(h => h.id === optimisticReport.id ? result.hotspot : h));
+    }
 
-    Alert.alert(
-      '🎉 Report Published!',
-      `You earned +${earnedKarma} Swachhata Karma points!\n\n• Base Photo Reward: +50 Karma\n• Details & Notes Bonus (${charCount} chars): +${notesBonus} Karma\n\nThank you for keeping India clean!`
-    );
+    // Background sync to confirm all devices are in sync
+    loadData(null, true);
+
+    if (isCitizen) {
+      Alert.alert(
+        '🎉 Report Published!',
+        `You earned +${earnedKarma} Swachhata Karma points!\n\n• Base Photo Reward: +50 Karma\n• Details & Notes Bonus (${charCount} chars): +${notesBonus} Karma\n\nThank you for keeping India clean!`
+      );
+    } else {
+      Alert.alert(
+        '✅ Hotspot Logged!',
+        'The waste hotspot has been successfully updated on the live municipal map.'
+      );
+    }
 
     return result;
   };
 
-  // Upvote / Single-vote per user restriction
+  // Upvote / Single-vote per user restriction (Karma strictly for citizens)
   const handleUpvote = async (id) => {
     if (votedHotspotIds.includes(id)) {
       Alert.alert('Notice', 'You have already confirmed and voted for this spot.');
@@ -360,8 +490,9 @@ export default function App() {
       await AsyncStorage.setItem('@nearbin_voted_hotspots', JSON.stringify(nextVoted));
     } catch (e) {}
 
-    // Civic engagement karma reward (+10 Karma for community vote)
-    if (user) {
+    // Civic engagement karma reward (+10 Karma for community vote, Citizens only)
+    const isCitizen = !user || user.role === 'citizen';
+    if (user && isCitizen) {
       const nextKarma = (user.karma || 0) + 10;
       const updatedUser = { ...user, karma: nextKarma };
       setUser(updatedUser);
@@ -386,10 +517,37 @@ export default function App() {
     await loadData();
   };
 
-  // 3-Tab Bottom Navigation (Clean Stock Android M3)
+  // 3-Tab Dynamic Navigation: Replaces "Nearby Feed" with the role's operational panel
+  const isGovtWorker = user?.role === 'worker';
+  const isKabadiwala = user?.role === 'scrap_picker';
+
+  const middleTabConfig = isGovtWorker
+    ? {
+        id: 'feed',
+        label: 'Govt Ops',
+        desktopLabel: 'Govt Safai Portal',
+        icon: '🚜',
+        badgeCount: hotspots.filter((h) => h.status !== 'cleaned').length,
+      }
+    : isKabadiwala
+    ? {
+        id: 'feed',
+        label: 'Scrap Radar',
+        desktopLabel: 'Kabadi Scrap Radar',
+        icon: '♻️',
+        badgeCount: hotspots.filter((h) => ['plastic', 'scrap'].includes(h.category) && h.status !== 'cleaned').length,
+      }
+    : {
+        id: 'feed',
+        label: 'Nearby Feed',
+        desktopLabel: 'Nearby Feed',
+        icon: '📋',
+        badgeCount: hotspots.length,
+      };
+
   const TABS = [
     { id: 'map', label: 'Heatmap', icon: '🗺️' },
-    { id: 'feed', label: 'Nearby Feed', icon: '📋' },
+    { id: middleTabConfig.id, label: middleTabConfig.label, icon: middleTabConfig.icon },
     { id: 'menu', label: 'Menu', icon: '⚙️' },
   ];
 
@@ -439,10 +597,13 @@ export default function App() {
 
               <TouchableOpacity
                 style={[styles.desktopTabBtn, currentTab === 'feed' && [styles.desktopTabBtnActive, { backgroundColor: activeColors.surfaceCard }]]}
-                onPress={() => setCurrentTab('feed')}
+                onPress={() => {
+                  setCurrentTab('feed');
+                  loadData(null, true);
+                }}
                 activeOpacity={0.8}
               >
-                <Text style={{ fontSize: 15 }}>📋</Text>
+                <Text style={{ fontSize: 15 }}>{middleTabConfig.icon}</Text>
                 <Text
                   style={[
                     styles.desktopTabText,
@@ -450,11 +611,24 @@ export default function App() {
                     currentTab === 'feed' && { fontWeight: '900' },
                   ]}
                 >
-                  Nearby Feed
+                  {middleTabConfig.desktopLabel}
                 </Text>
-                {hotspots.length > 0 && (
-                  <View style={[styles.desktopBadgeCount, { backgroundColor: activeColors.primary }]}>
-                    <Text style={[styles.desktopBadgeCountText, { color: activeColors.textInverse }]}>{hotspots.length}</Text>
+                {middleTabConfig.badgeCount > 0 && (
+                  <View
+                    style={[
+                      styles.desktopBadgeCount,
+                      {
+                        backgroundColor: isGovtWorker
+                          ? '#00B0FF'
+                          : isKabadiwala
+                          ? '#FF9100'
+                          : activeColors.primary,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.desktopBadgeCountText, { color: activeColors.textInverse }]}>
+                      {middleTabConfig.badgeCount}
+                    </Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -541,7 +715,7 @@ export default function App() {
           {currentTab === 'map' && (
             <MapScreen
               hotspots={hotspots}
-              currentRole="citizen"
+              currentRole={user?.role || 'citizen'}
               onUpvote={handleUpvote}
               onUpdateStatus={handleUpdateStatus}
               onClaimRecyclables={handleClaimRecyclables}
@@ -560,17 +734,36 @@ export default function App() {
 
           {currentTab === 'feed' && (
             <View style={[styles.feedTabContainer, isDesktop && styles.desktopCenteredTab]}>
-              <FeedScreen
-                hotspots={hotspots}
-                onUpvote={handleUpvote}
-                onUpdateStatus={handleUpdateStatus}
-                onClaimRecyclables={handleClaimRecyclables}
-                currentRole="citizen"
-                isDark={isDark}
-                userLocation={userLocation}
-                onOpenReport={() => setCurrentTab('map')}
-                votedHotspotIds={votedHotspotIds}
-              />
+              {isGovtWorker ? (
+                <WorkerScreen
+                  hotspots={hotspots}
+                  onUpdateStatus={handleUpdateStatus}
+                  user={user}
+                  isDark={isDark}
+                />
+              ) : isKabadiwala ? (
+                <ScrapPickerScreen
+                  hotspots={hotspots}
+                  onClaimRecyclables={handleClaimRecyclables}
+                  user={user}
+                  isDark={isDark}
+                />
+              ) : (
+                <FeedScreen
+                  hotspots={hotspots}
+                  onUpvote={handleUpvote}
+                  onUpdateStatus={handleUpdateStatus}
+                  onClaimRecyclables={handleClaimRecyclables}
+                  currentRole={user?.role || 'citizen'}
+                  isDark={isDark}
+                  userLocation={userLocation}
+                  onOpenReport={() => setCurrentTab('map')}
+                  votedHotspotIds={votedHotspotIds}
+                  user={user}
+                  onRefresh={() => loadData(null, false)}
+                  isRefreshing={isRefreshing}
+                />
+              )}
             </View>
           )}
 
@@ -592,6 +785,7 @@ export default function App() {
                 onClaimWelcomeBonus={handleClaimWelcomeBonus}
                 onShareReferral={handleShareReferral}
                 userLocation={userLocation}
+                onNavigateTab={(tab) => setCurrentTab(tab)}
               />
             </View>
           )}
@@ -606,7 +800,12 @@ export default function App() {
                 <TouchableOpacity
                   key={tab.id}
                   style={styles.navItem}
-                  onPress={() => setCurrentTab(tab.id)}
+                  onPress={() => {
+                    setCurrentTab(tab.id);
+                    if (tab.id === 'feed') {
+                      loadData(null, true);
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <View

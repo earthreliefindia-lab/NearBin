@@ -19,28 +19,57 @@ export default function StoryViewerModal({ visible, hotspot, onClose, onUpvote }
   const [currentIndex, setCurrentIndex] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Derive photos list from hotspot (supports multiple story uploads)
-  const photos = hotspot?.photos && hotspot.photos.length > 0
-    ? hotspot.photos
-    : [
-        {
-          uri: hotspot?.beforePhoto || 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=600&auto=format&fit=crop&q=80',
-          reportedBy: hotspot?.reportedBy || 'Concerned Citizen',
-          reportedAt: hotspot?.reportedAt ? new Date(hotspot.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
-          caption: hotspot?.title || 'Garbage Dump Spotted',
-        },
-        ...(hotspot?.afterPhoto
-          ? [
-              {
-                uri: hotspot.afterPhoto,
-                reportedBy: hotspot?.cleanedBy || 'Govt Safai Mitra',
-                reportedAt: hotspot?.cleanedAt ? new Date(hotspot.cleanedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Cleaned',
-                caption: '✨ Site Cleaned & Disinfected Proof',
-                isCleaned: true,
-              },
-            ]
-          : []),
-      ];
+  // Derive all photos uploaded at this spot (initial dump, subsequent citizen uploads, and clean proof)
+  const photos = (() => {
+    const list = [];
+    const seenUris = new Set();
+
+    if (Array.isArray(hotspot?.photos)) {
+      hotspot.photos.forEach((p, idx) => {
+        const uri = typeof p === 'string' ? p : p?.uri;
+        if (uri && !seenUris.has(uri)) {
+          seenUris.add(uri);
+          list.push({
+            uri,
+            reportedBy: p?.reportedBy || hotspot?.reportedBy || 'Citizen Contributor',
+            reportedAt: p?.reportedAt ? new Date(p.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `Spot Photo #${idx + 1}`,
+            caption: p?.caption || hotspot?.title || 'Live Status Photo',
+          });
+        }
+      });
+    }
+
+    if (hotspot?.beforePhoto && !seenUris.has(hotspot.beforePhoto)) {
+      seenUris.add(hotspot.beforePhoto);
+      list.unshift({
+        uri: hotspot.beforePhoto,
+        reportedBy: hotspot.reportedBy || 'Citizen Contributor',
+        reportedAt: hotspot.reportedAt ? new Date(hotspot.reportedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Initial Report',
+        caption: hotspot.title || 'Initial garbage spot',
+      });
+    }
+
+    if (hotspot?.afterPhoto && !seenUris.has(hotspot.afterPhoto)) {
+      seenUris.add(hotspot.afterPhoto);
+      list.push({
+        uri: hotspot.afterPhoto,
+        reportedBy: hotspot.cleanedBy || 'Govt Safai Mitra Squad',
+        reportedAt: hotspot.cleanedAt ? new Date(hotspot.cleanedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Cleaned',
+        caption: '✨ Official Cleanup Proof (Completed & Disinfected)',
+        isCleaned: true,
+      });
+    }
+
+    if (list.length === 0) {
+      list.push({
+        uri: 'https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=600&auto=format&fit=crop&q=80',
+        reportedBy: 'Citizen Contributor',
+        reportedAt: 'Recently',
+        caption: hotspot?.title || 'Live Status Spot Photo',
+      });
+    }
+    return list;
+  })();
 
   const totalStories = photos.length;
   const currentStory = photos[currentIndex] || photos[0];

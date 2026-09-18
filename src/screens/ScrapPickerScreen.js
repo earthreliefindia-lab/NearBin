@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { Colors, CategoryMeta } from '../theme/colors';
+import { Colors, DarkColors, LightColors, CategoryMeta } from '../theme/colors';
 
-export default function ScrapPickerScreen({ hotspots, onClaimRecyclables }) {
+export default function ScrapPickerScreen({ hotspots, onClaimRecyclables, user, isDark }) {
+  const theme = isDark ? DarkColors : LightColors;
   const [claimingId, setClaimingId] = useState(null);
 
   // Filter only plastic & scrap waste that is not yet cleaned
@@ -13,7 +14,8 @@ export default function ScrapPickerScreen({ hotspots, onClaimRecyclables }) {
   const handleClaim = async (item) => {
     setClaimingId(item.id);
     try {
-      await onClaimRecyclables(item.id, 'Raju Scrap Recycler');
+      const pickerName = user?.name ? `${user.name} (Kabadiwala Recycler)` : 'Raju Scrap Recycler';
+      await onClaimRecyclables(item.id, pickerName);
     } finally {
       setClaimingId(null);
     }
@@ -21,10 +23,10 @@ export default function ScrapPickerScreen({ hotspots, onClaimRecyclables }) {
 
   const renderItem = ({ item }) => {
     const cat = CategoryMeta[item.category] || CategoryMeta.scrap;
-    const isClaimed = !!item.claimedBy;
+    const isClaimed = !!item.claimedBy || item.status === 'recycled_picked_up';
 
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: theme.surfaceCard, borderColor: theme.border }]}>
         <Image source={{ uri: item.beforePhoto }} style={styles.thumb} />
         
         <View style={styles.details}>
@@ -38,12 +40,15 @@ export default function ScrapPickerScreen({ hotspots, onClaimRecyclables }) {
             </View>
           </View>
 
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.address}>📍 {item.address}</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>{item.title}</Text>
+          <Text style={[styles.address, { color: theme.textMuted }]}>📍 {item.address}</Text>
 
           {isClaimed ? (
             <View style={styles.claimedBox}>
-              <Text style={styles.claimedText}>✅ Claimed By: {item.claimedBy}</Text>
+              <Text style={styles.claimedText}>✅ Recycled Picked Up by: {item.claimedBy || 'You'}</Text>
+              <Text style={{ fontSize: 10, color: Colors.textSecondary, marginTop: 3 }}>
+                🏛️ Handed over to Govt Safai Mitra squad for final disinfection & proof upload
+              </Text>
             </View>
           ) : (
             <TouchableOpacity
@@ -64,11 +69,11 @@ export default function ScrapPickerScreen({ hotspots, onClaimRecyclables }) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View>
-          <Text style={styles.headerTitle}>Kabadiwala Scrap Radar</Text>
-          <Text style={styles.headerSubtitle}>High-value plastics, cardboard & metal for collection</Text>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>Kabadiwala Scrap Radar</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>High-value plastics, cardboard & metal for collection</Text>
         </View>
         <View style={styles.ecoBadge}>
           <Text style={styles.ecoText}>CIRCULAR ECONOMY</Text>
@@ -84,8 +89,8 @@ export default function ScrapPickerScreen({ hotspots, onClaimRecyclables }) {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>🎉</Text>
-            <Text style={styles.emptyTitle}>All Recyclables Collected</Text>
-            <Text style={styles.emptySubtitle}>No pending recyclable dump reported right now.</Text>
+            <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>All Recyclables Collected</Text>
+            <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>No pending recyclable dump reported right now.</Text>
           </View>
         }
       />

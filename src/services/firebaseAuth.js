@@ -296,4 +296,21 @@ export const FirebaseAuthService = {
       };
     }
   },
+
+  /**
+   * Signs out current user session from Firebase Web SDK
+   */
+  async signOut() {
+    try {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const fb = await ensureFirebaseWeb();
+        if (fb && fb.auth) {
+          await fb.auth().signOut();
+        }
+      }
+    } catch (e) {
+      console.warn('[Firebase Auth] Sign out error/notice:', e?.message);
+    }
+    return { success: true };
+  },
 };

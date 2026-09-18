@@ -1,40 +1,112 @@
 # NearBin subdomain configuration for Hostinger (nearbin.agriheal.in)
+# Security Hardened — Earth Relief India
+
+# ─── URL Rewriting (SPA + static files) ────────────────────────────────────
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Serve real files before applying the SPA route fallback.
+  # Serve real files/directories before SPA fallback
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # Serve privacy policy and terms & conditions directly
+  # Serve legal pages directly
   RewriteRule ^privacy/?$ privacy.html [L]
   RewriteRule ^terms/?$ terms.html [L]
 
-  # Client-side navigation routes load the web app shell.
+  # Client-side navigation routes load the web app shell
   RewriteRule ^ index.html [L]
 </IfModule>
 
+# ─── Security Headers ───────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+  # Prevent Clickjacking — iframe embedding only from same origin
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # Prevent MIME type sniffing
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Enable XSS filter in browsers
+  Header always set X-XSS-Protection "1; mode=block"
+
+  # Control referrer info
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Permissions Policy — only allow GPS and camera for self (NearBin core features)
+  Header always set Permissions-Policy "geolocation=(self), camera=(self), microphone=()"
+
+  # Content Security Policy — allow Cloudinary photos, Firebase, Mappls
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.mappls.com https://cdn.jsdelivr.net https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://lh3.googleusercontent.com https://api.mapbox.com; connect-src 'self' https://api.cloudinary.com https://*.supabase.co wss://*.supabase.co https://identitytoolkit.googleapis.com https://nearbin-api.onrender.com https://api.earthrelief.in; worker-src 'self' blob:; frame-ancestors 'self';"
+
+  # HSTS — force HTTPS (only on live domain, not localhost)
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains" "expr=%{HTTPS} == 'on'"
+
+  # Remove server fingerprinting headers
+  Header always unset X-Powered-By
+  Header always unset Server
+</IfModule>
+
+# ─── Block Access to Sensitive Files ───────────────────────────────────────
+<FilesMatch "\.(env|env\.example|json|sql|log|bak|config|gitignore|npmrc)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Allow manifest.json (PWA needs it)
+<Files "manifest.json">
+  <IfModule mod_authz_core.c>
+    Require all granted
+  </IfModule>
+</Files>
+
+# ─── MIME Types ─────────────────────────────────────────────────────────────
 <IfModule mod_mime.c>
   AddType application/javascript .js
-  AddType application/manifest+json .json .webmanifest
+  AddType application/manifest+json .webmanifest
   AddType image/svg+xml .svg
   AddType image/webp .webp
   AddType font/woff2 .woff2
   AddType application/vnd.android.package-archive .apk
 </IfModule>
 
+# ─── Caching (performance) ──────────────────────────────────────────────────
 <IfModule mod_expires.c>
   ExpiresActive On
   ExpiresByType application/manifest+json "access plus 0 seconds"
-  ExpiresByType text/html "access plus 10 minutes"
+  ExpiresByType text/html              "access plus 10 minutes"
   ExpiresByType application/javascript "access plus 1 year"
-  ExpiresByType text/css "access plus 1 year"
-  ExpiresByType image/png "access plus 1 year"
-  ExpiresByType image/jpeg "access plus 1 year"
-  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css               "access plus 1 year"
+  ExpiresByType image/png              "access plus 1 year"
+  ExpiresByType image/jpeg             "access plus 1 year"
+  ExpiresByType image/svg+xml         "access plus 1 year"
+  ExpiresByType image/webp             "access plus 1 year"
+  ExpiresByType font/woff2             "access plus 1 year"
 </IfModule>
 
+# ─── Gzip Compression ───────────────────────────────────────────────────────
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json application/manifest+json image/svg+xml
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json application/manifest+json image/svg+xml font/woff2
+</IfModule>
+
+# ─── Prevent Directory Listing ──────────────────────────────────────────────
+Options -Indexes
+
+# ─── Block Common Attack Patterns ───────────────────────────────────────────
+<IfModule mod_rewrite.c>
+  # Block SQL injection attempts in query strings
+  RewriteCond %{QUERY_STRING} (union|select|insert|drop|update|delete|script|eval|exec) [NC]
+  RewriteRule ^ - [F,L]
+
+  # Block path traversal attacks
+  RewriteCond %{REQUEST_URI} (\.\./|\.\.%2F|%252E%252E) [NC]
+  RewriteRule ^ - [F,L]
+
+  # Block suspicious user agents (bots/scanners)
+  RewriteCond %{HTTP_USER_AGENT} (nikto|sqlmap|nmap|masscan|zgrab|libwww-perl) [NC]
+  RewriteRule ^ - [F,L]
 </IfModule>

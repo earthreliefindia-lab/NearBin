@@ -42,11 +42,13 @@ export const KarmaService = {
       throw new Error('Please sign in first to claim your Welcome Karma.');
     }
 
-    if (targetUser.welcomeClaimedAt) {
+    // Only throw already claimed if they already have their welcome bonus reflected
+    if (targetUser.welcomeClaimedAt && (targetUser.karma || 0) >= 500) {
       throw new Error('Welcome reward (+500 Karma) has already been claimed for this account.');
     }
 
-    const nextKarma = (targetUser.karma || 0) + 500;
+    const currentK = typeof targetUser.karma === 'number' ? targetUser.karma : 0;
+    const nextKarma = currentK >= 500 ? currentK + 500 : Math.max(500, currentK + 500);
     const nowIso = new Date().toISOString();
 
     const updatedUser = {
@@ -67,9 +69,11 @@ export const KarmaService = {
     }
 
     // 2. Sync to server in background
-    WasteService.saveProfile(updatedUser).catch((err) => {
+    try {
+      await WasteService.saveProfile(updatedUser);
+    } catch (err) {
       console.log('[KarmaService] Profile server sync notice:', err);
-    });
+    }
 
     // 3. If Supabase is available, sync to Supabase RPC gracefully without throwing
     if (isSupabaseConfigured && supabase) {

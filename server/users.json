@@ -19,5 +19,21 @@
     "verifiedReports": 3,
     "joinedAt": "Sept 2026",
     "updatedAt": "2026-09-05T11:52:09.864Z"
+  },
+  "kzy5YtUCb4ghZFoay9TqOvomesk2": {
+    "id": "kzy5YtUCb4ghZFoay9TqOvomesk2",
+    "name": "Earth Relief",
+    "email": "earthrelief.india@gmail.com",
+    "phone": "",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL8YgZNcHf6c624HIHrycFFYkojEU5fUF581EsCcdnhLCmFV9M=s96-c",
+    "authProvider": "firebase_google",
+    "ward": "Municipal Ward - Geotagged Zone",
+    "role": "worker",
+    "karma": 300,
+    "verifiedReports": 0,
+    "joinedAt": "Sept 2026",
+    "updatedAt": "2026-09-07T17:33:56.504Z",
+    "welcomeClaimedAt": "2026-09-07T16:55:04.534Z",
+    "referralCode": "NB-MESK2"
   }
 }
